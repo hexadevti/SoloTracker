@@ -603,30 +603,37 @@ ipcMain.on('video:cmd', (event, cmd) => {
 });
 
 ipcMain.handle('store:load', () => readStore());
+// Idioma escolhido (lido de forma síncrona pelo preload, antes de a interface montar).
+ipcMain.on('lang:get', (e) => {
+  const lang = readStore()?.settings?.lang;
+  e.returnValue = lang === 'pt' || lang === 'en' ? lang : '';
+});
 ipcMain.handle('store:save', (_e, data) => {
   writeStore(data);
   return true;
 });
 // ---------- Exportar / importar projetos (arquivos .json) ----------
-const PROJECT_FILTERS = [{ name: 'Projeto SoloTracker', extensions: ['json'] }];
+const projectFilters = (en) => [{ name: en ? 'SoloTracker project' : 'Projeto SoloTracker', extensions: ['json'] }];
 
-ipcMain.handle('project:export', async (_e, { fileName, data }) => {
-  const safe = String(fileName || 'projeto').replace(/[\\/:*?"<>|]+/g, '_').slice(0, 120);
+ipcMain.handle('project:export', async (_e, { fileName, data, lang }) => {
+  const en = lang === 'en';
+  const safe = String(fileName || (en ? 'project' : 'projeto')).replace(/[\\/:*?"<>|]+/g, '_').slice(0, 120);
   const res = await dialog.showSaveDialog(win, {
-    title: 'Exportar projeto',
+    title: en ? 'Export project' : 'Exportar projeto',
     defaultPath: path.join(app.getPath('documents'), `${safe}.solotracker.json`),
-    filters: PROJECT_FILTERS,
+    filters: projectFilters(en),
   });
   if (res.canceled || !res.filePath) return false;
   fs.writeFileSync(res.filePath, JSON.stringify(data, null, 2));
   return true;
 });
 
-ipcMain.handle('project:import', async () => {
+ipcMain.handle('project:import', async (_e, lang) => {
+  const en = lang === 'en';
   const res = await dialog.showOpenDialog(win, {
-    title: 'Importar projetos',
+    title: en ? 'Import projects' : 'Importar projetos',
     properties: ['openFile', 'multiSelections'],
-    filters: PROJECT_FILTERS,
+    filters: projectFilters(en),
   });
   if (res.canceled) return [];
   return res.filePaths

@@ -22,11 +22,12 @@ if (isYouTubeEmbed || isLocalPlayer) {
   contextBridge.exposeInMainWorld('solo', {
     send: (cmd) => ipcRenderer.send('video:cmd', cmd),
     onEvent: (cb) => ipcRenderer.on('video:event', (_e, payload) => cb(payload)),
+    lang: ipcRenderer.sendSync('lang:get'),
     loadStore: () => ipcRenderer.invoke('store:load'),
     saveStore: (data) => ipcRenderer.invoke('store:save', data),
     openExternal: (url) => ipcRenderer.invoke('open-external', url),
-    exportProject: (fileName, data) => ipcRenderer.invoke('project:export', { fileName, data }),
-    importProjects: () => ipcRenderer.invoke('project:import'),
+    exportProject: (fileName, data, lang) => ipcRenderer.invoke('project:export', { fileName, data, lang }),
+    importProjects: (lang) => ipcRenderer.invoke('project:import', lang),
     offline: {
       list: () => ipcRenderer.invoke('offline:list'),
       download: (videoId) => ipcRenderer.invoke('offline:download', videoId),

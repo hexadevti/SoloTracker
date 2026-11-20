@@ -5,6 +5,7 @@ const SHELL = [
   'styles.css',
   'web.css',
   'web-api.js',
+  'i18n.js',
   'timeline.js',
   'app.js',
   'mobile.js',

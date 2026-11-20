@@ -195,7 +195,8 @@ input[type=range] { accent-color: var(--accent); }
 .panel[open] { padding-bottom: 10px; }
 .form-grid { display: grid; grid-template-columns: 1fr 76px; gap: 6px 8px; align-items: center; margin-top: 6px; }
 .form-grid label { font-size: 12px; color: var(--muted); }
-.form-grid input, input.rename {
+.form-grid:has(select) { grid-template-columns: 1fr 110px; }
+.form-grid input, .form-grid select, input.rename {
   background: var(--bg); color: var(--text); border: 1px solid var(--border);
   border-radius: 4px; padding: 4px 6px; width: 100%; font-size: 13px; user-select: text;
 }

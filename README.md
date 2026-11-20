@@ -67,6 +67,11 @@ No modo offline aparece o botão **🎸 Separar guitarra**. Ele separa a trilha 
 - **Treino progressivo**: aumenta a velocidade a cada N repetições até a meta.
 - **Pausa entre repetições** e **pré-roll** antes do A.
 - Retoma de onde você parou (posição, loop e velocidade por projeto).
+- **Português e inglês**: segue o idioma do sistema/navegador (pt → português, qualquer outro → inglês). Para trocar, use **Configurações → Idioma / Language**; a escolha fica salva.
+
+### Idiomas (para quem mexe no código)
+
+Os textos ficam em `src/renderer/i18n.js`, que vale para o app de PC e a versão web. O português é o texto-fonte: no código, use `tr('Texto em português', { var })`. Coloque a tradução no objeto `EN` com a mesma chave. Os textos fixos do `index.html` são traduzidos ao abrir a página, comparando o texto exato. Mensagens com partes variáveis vindas do `main.js`, do `preload.js` ou do `separate.py` entram em `PATTERNS`. Texto sem tradução aparece em português.
 
 Os dados ficam em `%APPDATA%/solotracker/solotracker-data.json`. Dados do formato antigo (trechos por vídeo) são convertidos automaticamente em projetos.
 

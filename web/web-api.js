@@ -755,7 +755,7 @@
   const STORE_KEY = 'solotracker-data';
 
   async function exportProject(fileName, data) {
-    const safe = String(fileName || 'projeto').replace(/[\\/:*?"<>|]+/g, '_').slice(0, 120);
+    const safe = String(fileName || (typeof tr === 'function' ? tr : (x) => x)('projeto')).replace(/[\\/:*?"<>|]+/g, '_').slice(0, 120);
     const name = `${safe}.solotracker.json`;
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     // No celular, tenta a folha de compartilhamento (WhatsApp, Drive, e-mail…).
@@ -763,7 +763,7 @@
       const file = new File([blob], name, { type: 'application/json' });
       if (navigator.canShare({ files: [file] })) {
         try {
-          await navigator.share({ files: [file], title: String(fileName || 'Projeto SoloTracker') });
+          await navigator.share({ files: [file], title: String(fileName || (typeof tr === 'function' ? tr : (x) => x)('Projeto SoloTracker')) });
           return true;
         } catch (err) {
           if (err && err.name === 'AbortError') return false;

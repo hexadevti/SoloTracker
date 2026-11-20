@@ -171,7 +171,9 @@ class Timeline {
       div.dataset.id = x.id;
       div.style.left = `${l}%`;
       div.style.width = `${Math.max(0, r - l)}%`;
-      div.title = `${x.name} (${fmtTime(x.a, true)} → ${fmtTime(x.b, true)}) — clique para abrir`;
+      const vars = { name: x.name, a: fmtTime(x.a, true), b: fmtTime(x.b, true) };
+      div.title =
+        typeof tr === 'function' ? tr('{name} ({a} → {b}) — clique para abrir', vars) : `${vars.name} (${vars.a} → ${vars.b}) — clique para abrir`;
       const span = document.createElement('span');
       span.textContent = x.label;
       div.appendChild(span);

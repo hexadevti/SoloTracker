@@ -91,7 +91,7 @@ function png(size) {
 await fs.rm(OUT, { recursive: true, force: true });
 await fs.mkdir(OUT, { recursive: true });
 
-for (const f of ['app.js', 'timeline.js', 'styles.css']) {
+for (const f of ['i18n.js', 'app.js', 'timeline.js', 'styles.css']) {
   await fs.copyFile(path.join(SRC, f), path.join(OUT, f));
 }
 for (const f of ['web-api.js', 'mobile.js', 'web.css', 'manifest.webmanifest', '_headers']) {

@@ -3,13 +3,14 @@
 
 const $ = (id) => document.getElementById(id);
 const api = window.solo;
+I18N.translateDom(document); // textos fixos do index.html (i18n.js)
 // Versão web (web/web-api.js): sem yt-dlp nem Demucs; "offline" = arquivo guardado no navegador.
 const WEB = api.platform === 'web';
 // Layout de celular (só na versão web): textos falam em toques em vez de teclas.
 const TOUCH = document.documentElement.classList.contains('mobile');
 const isYtId = (id) => /^[\w-]{11}$/.test(id || '');
 // Na web, "offline" usa um arquivo do aparelho; no Electron, o vídeo baixado.
-const FILE_WORD = WEB ? 'arquivo salvo' : 'vídeo baixado';
+const FILE_WORD = WEB ? tr('arquivo salvo') : tr('vídeo baixado');
 
 const DEFAULT_SETTINGS = {
   step: 2,
@@ -109,10 +110,10 @@ function escapeHtml(s) {
 let saveTimer = null;
 function saveSoon() {
   clearTimeout(saveTimer);
-  $('saveState').textContent = project() ? 'Salvando…' : '';
+  $('saveState').textContent = project() ? tr('Salvando…') : '';
   saveTimer = setTimeout(async () => {
     await api.saveStore(S.store);
-    $('saveState').textContent = project() ? 'Salvo ✓' : '';
+    $('saveState').textContent = project() ? tr('Salvo ✓') : '';
   }, 400);
 }
 
@@ -127,7 +128,7 @@ function newProjectObj(videoId, name = '', videoTitle = '') {
   const now = Date.now();
   return {
     id: uid(),
-    name: name || videoTitle || 'Nova música',
+    name: name || videoTitle || tr('Nova música'),
     nameEdited: !!name,
     videoId,
     videoTitle,
@@ -242,7 +243,7 @@ function releaseLoop() {
   resetReps();
   applyLoop();
   renderSections();
-  toast('Fora do trecho — loop livre');
+  toast(tr('Fora do trecho — loop livre'));
 }
 
 function scrubLoopCheck(t, phase) {
@@ -299,7 +300,7 @@ function setRate(r, { silent = false, sync = true } = {}) {
     touch();
     updateSectionRange(sec);
   }
-  if (!silent) toast(sec ? `Velocidade ${pct}% · ${sec.name}` : `Velocidade ${pct}%`);
+  if (!silent) toast(sec ? tr('Velocidade {pct}% · {name}', { pct, name: sec.name }) : tr('Velocidade {pct}%', { pct }));
   updateTrainerStatus();
 }
 
@@ -350,7 +351,7 @@ function setA(t) {
   }
   resetReps();
   applyLoop();
-  toast(`Início = ${fmtTime(t, true)}`);
+  toast(tr('Início = {t}', { t: fmtTime(t, true) }));
 }
 
 function setB(t) {
@@ -362,7 +363,7 @@ function setB(t) {
   if (S.loop.b - S.loop.a < 0.05) S.loop.b = round2(S.loop.a + 0.05);
   resetReps();
   applyLoop();
-  toast(`Fim = ${fmtTime(S.loop.b, true)}`);
+  toast(tr('Fim = {t}', { t: fmtTime(S.loop.b, true) }));
 }
 
 function nudge(which, dir) {
@@ -383,7 +384,7 @@ function nudge(which, dir) {
 
 function toggleLoop() {
   if (!hasLoop()) {
-    toast(TOUCH ? 'Crie um trecho primeiro (＋ Novo trecho)' : 'Crie um trecho primeiro (N)');
+    toast(TOUCH ? tr('Crie um trecho primeiro (＋ Novo trecho)') : tr('Crie um trecho primeiro (N)'));
     return;
   }
   S.loop.enabled = !S.loop.enabled;
@@ -412,7 +413,7 @@ function resetReps() {
 }
 
 function updateRepCounter() {
-  $('repCounter').textContent = `Repetição ${S.reps + 1}`;
+  $('repCounter').textContent = tr('Repetição {n}', { n: S.reps + 1 });
 }
 
 function updateActiveSectionLabel() {
@@ -439,7 +440,7 @@ function cancelCapture() {
   S.loop = { a: null, b: null, enabled: false };
   applyLoop({ save: false });
   updateCaptureUi();
-  toast('Novo trecho cancelado');
+  toast(tr('Novo trecho cancelado'));
 }
 
 function captureMark() {
@@ -449,7 +450,7 @@ function captureMark() {
     applyLoop({ save: false });
     S.capture = 'b';
     updateCaptureUi();
-    toast(`Início = ${fmtTime(t, true)}`);
+    toast(tr('Início = {t}', { t: fmtTime(t, true) }));
     return;
   }
   // Marcando o fim: cria e salva o trecho.
@@ -457,13 +458,13 @@ function captureMark() {
   let a = Math.min(a0, t);
   let b = Math.max(a0, t);
   if (b - a < 0.2) {
-    toast('Trecho muito curto — deixe tocar um pouco antes de marcar o fim');
+    toast(tr('Trecho muito curto — deixe tocar um pouco antes de marcar o fim'));
     return;
   }
   a = round2(a);
   b = round2(b);
   const p = project();
-  const sec = { id: uid(), name: `Trecho ${p.sections.length + 1}`, a, b, rate: S.rate };
+  const sec = { id: uid(), name: tr('Trecho {n}', { n: p.sections.length + 1 }), a, b, rate: S.rate };
   p.sections.push(sec);
   sortSections();
   S.capture = null;
@@ -475,33 +476,33 @@ function captureMark() {
   renderSections();
   goToA();
   send('play');
-  toast(`${sec.name} salvo`);
+  toast(tr('{name} salvo', { name: sec.name }));
 }
 
 function updateCaptureUi() {
   const el = $('captureBanner');
   const btn = $('btnNewSection');
-  $('btnClearLoop').textContent = S.capture ? 'Cancelar' : 'Limpar';
+  $('btnClearLoop').textContent = S.capture ? tr('Cancelar') : tr('Limpar');
   if (!S.capture) {
     el.classList.add('hidden');
     btn.classList.remove('recording');
-    btn.textContent = '＋ Novo trecho';
+    btn.textContent = tr('＋ Novo trecho');
     return;
   }
   btn.classList.add('recording');
-  btn.textContent = S.capture === 'a' ? '● Marcar início' : '● Marcar fim';
+  btn.textContent = S.capture === 'a' ? tr('● Marcar início') : tr('● Marcar fim');
   el.classList.remove('hidden');
   if (TOUCH) {
     el.innerHTML =
       S.capture === 'a'
-        ? '<span class="dot"></span> NOVO TRECHO — toque em <b>Marcar início</b>'
-        : `<span class="dot"></span> Início ${fmtTime(S.loop.a, true)} — toque em <b>Marcar fim</b>`;
+        ? `<span class="dot"></span> ${tr('NOVO TRECHO — toque em <b>Marcar início</b>')}`
+        : `<span class="dot"></span> ${tr('Início {t} — toque em <b>Marcar fim</b>', { t: fmtTime(S.loop.a, true) })}`;
     return;
   }
   el.innerHTML =
     S.capture === 'a'
-      ? '<span class="dot"></span> NOVO TRECHO — <kbd>Enter</kbd> marca o <b>início</b> · <kbd>Esc</kbd> cancela'
-      : `<span class="dot"></span> Início ${fmtTime(S.loop.a, true)} — <kbd>Enter</kbd> marca o <b>fim</b> · <kbd>Esc</kbd> cancela`;
+      ? `<span class="dot"></span> ${tr('NOVO TRECHO — <kbd>Enter</kbd> marca o <b>início</b> · <kbd>Esc</kbd> cancela')}`
+      : `<span class="dot"></span> ${tr('Início {t} — <kbd>Enter</kbd> marca o <b>fim</b> · <kbd>Esc</kbd> cancela', { t: fmtTime(S.loop.a, true) })}`;
 }
 
 // ---------------------------------------------------------------- trechos do projeto
@@ -550,15 +551,15 @@ function renderSections(editId = null) {
         <span class="name"></span>
         <span class="range">${sectionRangeText(sec)}</span>
       </div>
-      <button class="btn tiny" data-act="rename" title="Renomear">✎</button>
-      <button class="btn tiny danger" data-act="delete" title="Excluir">✕</button>
+      <button class="btn tiny" data-act="rename" title="${tr('Renomear')}">✎</button>
+      <button class="btn tiny danger" data-act="delete" title="${tr('Excluir')}">✕</button>
     `;
     li.querySelector('.name').textContent = sec.name;
     li.addEventListener('click', (e) => {
       if (e.target.closest('input')) return;
       const act = e.target.closest('[data-act]')?.dataset.act;
       if (act === 'delete') {
-        if (!window.confirm(`Excluir "${sec.name}"?`)) return;
+        if (!window.confirm(tr('Excluir "{name}"?', { name: sec.name }))) return;
         p.sections = p.sections.filter((x) => x.id !== sec.id);
         if (S.activeSectionId === sec.id) S.activeSectionId = null;
         touch();
@@ -626,10 +627,10 @@ function updateTrainerStatus() {
   }
   const pct = Math.round(S.rate * 100);
   if (pct >= t.target) {
-    el.textContent = `Meta atingida: ${pct}% 🎸`;
+    el.textContent = tr('Meta atingida: {pct}% 🎸', { pct });
   } else {
     const left = t.every - (S.trainerReps % t.every);
-    el.textContent = `Agora ${pct}% · sobe para ${Math.min(t.target, pct + t.step)}% em ${left} repetição(ões)`;
+    el.textContent = tr('Agora {pct}% · sobe para {next}% em {n} repetição(ões)', { pct, next: Math.min(t.target, pct + t.step), n: left });
   }
 }
 
@@ -657,7 +658,7 @@ function openFromUrl(parsed) {
     const p = newProjectObj(parsed.id);
     S.store.projects[p.id] = p;
     openProject(p.id, { start: parsed.start });
-    toast('Novo projeto criado');
+    toast(tr('Novo projeto criado'));
   }
 }
 
@@ -665,7 +666,7 @@ function createProject(videoId, name) {
   const p = newProjectObj(videoId, name);
   S.store.projects[p.id] = p;
   openProject(p.id);
-  toast('Novo projeto criado');
+  toast(tr('Novo projeto criado'));
 }
 
 function openProject(id, { start = null, autoplay = true } = {}) {
@@ -712,7 +713,7 @@ function loadPlayer(p, startAt, autoplay) {
   }
   if (p.mode === 'offline' && !S.offline[p.videoId]) {
     p.mode = 'online';
-    toast(WEB ? 'Arquivo não encontrado neste aparelho — tocando pelo YouTube' : 'Vídeo baixado não encontrado — tocando pelo YouTube');
+    toast(WEB ? tr('Arquivo não encontrado neste aparelho — tocando pelo YouTube') : tr('Vídeo baixado não encontrado — tocando pelo YouTube'));
     saveSoon();
   }
   if (api.loadPlayer) {
@@ -774,10 +775,12 @@ function showMissingFile(p) {
   const box = $('errorBox');
   box.innerHTML = '';
   const msg = document.createElement('p');
-  msg.textContent = `O arquivo deste projeto${p.fileName ? ` (${p.fileName})` : ''} não está salvo neste aparelho.`;
+  msg.textContent = p.fileName
+    ? tr('O arquivo deste projeto ({name}) não está salvo neste aparelho.', { name: p.fileName })
+    : tr('O arquivo deste projeto não está salvo neste aparelho.');
   const btn = document.createElement('button');
   btn.className = 'btn primary';
-  btn.textContent = '📂 Escolher arquivo';
+  btn.textContent = tr('📂 Escolher arquivo');
   btn.onclick = () => attachFile(p);
   box.append(msg, btn);
   box.classList.remove('hidden');
@@ -786,7 +789,7 @@ function showMissingFile(p) {
 /** Web: escolhe um arquivo de vídeo/áudio do aparelho, guarda no navegador e toca. */
 async function attachFile(p) {
   const vid = p.videoId;
-  S.downloads[vid] = { stage: 'Escolhendo o arquivo…', percent: null };
+  S.downloads[vid] = { stage: tr('Escolhendo o arquivo…'), percent: null };
   updateModeButton();
   // Chamado direto no clique: o seletor de arquivos precisa do gesto do usuário.
   const res = await api.offline.download(vid);
@@ -797,9 +800,9 @@ async function attachFile(p) {
     p.mode = 'offline';
     touch();
     if (p.id === S.projectId) loadPlayer(p, isYtId(vid) ? nowTime() : p.last.time || 0, true);
-    toast('Arquivo salvo neste aparelho — tocando offline');
+    toast(tr('Arquivo salvo neste aparelho — tocando offline'));
   } else if (!res.canceled) {
-    window.alert(`Não foi possível usar o arquivo.\n\n${res.error}`);
+    window.alert(`${tr('Não foi possível usar o arquivo.')}\n\n${tr(res.error)}`);
   }
   updateModeButton();
   if (libraryOpen()) renderLibrary();
@@ -810,7 +813,7 @@ async function createFileProject() {
   const id = `file-${uid()}`;
   const res = await api.offline.download(id);
   if (!res.ok) {
-    if (!res.canceled) window.alert(`Não foi possível usar o arquivo.\n\n${res.error}`);
+    if (!res.canceled) window.alert(`${tr('Não foi possível usar o arquivo.')}\n\n${tr(res.error)}`);
     return;
   }
   S.offline[id] = res.info;
@@ -821,7 +824,7 @@ async function createFileProject() {
   S.store.projects[p.id] = p;
   closeLibrary();
   openProject(p.id);
-  toast('Novo projeto criado');
+  toast(tr('Novo projeto criado'));
 }
 
 // ---------------------------------------------------------------- online / offline
@@ -843,35 +846,36 @@ function updateModeButton() {
   if (WEB) {
     if (dl) {
       btn.classList.add('busy');
-      btn.textContent = '📂 Escolhendo…';
-      btn.title = 'Clique para cancelar.';
+      btn.textContent = tr('📂 Escolhendo…');
+      btn.title = tr('Clique para cancelar.');
     } else if (p.mode === 'offline' || !isYtId(p.videoId)) {
       btn.classList.add('offline');
-      btn.textContent = '📂 Arquivo';
+      btn.textContent = tr('📂 Arquivo');
       btn.title = file
-        ? `Tocando "${file.name}" (${fmtSize(file.size)}), salvo neste aparelho.${isYtId(p.videoId) ? '\nClique para voltar a tocar pelo YouTube.' : ''}`
-        : 'Arquivo não encontrado neste aparelho.';
+        ? tr('Tocando "{name}" ({size}), salvo neste aparelho.', { name: file.name, size: fmtSize(file.size) }) +
+          (isYtId(p.videoId) ? `\n${tr('Clique para voltar a tocar pelo YouTube.')}` : '')
+        : tr('Arquivo não encontrado neste aparelho.');
     } else {
       btn.textContent = '▶ YouTube';
       btn.title = file
-        ? 'Tocando pelo YouTube. Clique para tocar o arquivo salvo neste aparelho.'
-        : 'Tocando pelo YouTube. Clique para escolher um arquivo de vídeo ou áudio deste aparelho (velocidade livre e loop preciso).';
+        ? tr('Tocando pelo YouTube. Clique para tocar o arquivo salvo neste aparelho.')
+        : tr('Tocando pelo YouTube. Clique para escolher um arquivo de vídeo ou áudio deste aparelho (velocidade livre e loop preciso).');
     }
     return;
   }
   if (dl) {
     btn.classList.add('busy');
-    btn.textContent = dl.percent != null ? `⏳ ${Math.floor(dl.percent)}%` : '⏳ Baixando…';
-    btn.title = `${dl.stage || 'Baixando…'}\nClique para cancelar.`;
+    btn.textContent = dl.percent != null ? `⏳ ${Math.floor(dl.percent)}%` : tr('⏳ Baixando…');
+    btn.title = `${tr(dl.stage || 'Baixando…')}\n${tr('Clique para cancelar.')}`;
   } else if (p.mode === 'offline') {
     btn.classList.add('offline');
     btn.textContent = '💾 Offline';
-    btn.title = `Tocando o vídeo baixado (${fmtSize(file?.size || 0)}), sem acessar o YouTube.\nClique para voltar a tocar pelo YouTube (online).`;
+    btn.title = tr('Tocando o vídeo baixado ({size}), sem acessar o YouTube.\nClique para voltar a tocar pelo YouTube (online).', { size: fmtSize(file?.size || 0) });
   } else {
     btn.textContent = '🌐 Online';
     btn.title = file
-      ? 'Tocando pelo YouTube. O vídeo já está baixado: clique para tocar offline.'
-      : 'Tocando pelo YouTube. Clique para baixar o vídeo e tocar offline.';
+      ? tr('Tocando pelo YouTube. O vídeo já está baixado: clique para tocar offline.')
+      : tr('Tocando pelo YouTube. Clique para baixar o vídeo e tocar offline.');
   }
 }
 
@@ -890,23 +894,23 @@ async function toggleMode() {
   if (!p) return;
   const vid = p.videoId;
   if (S.downloads[vid]) {
-    if (window.confirm(WEB ? 'Cancelar a escolha do arquivo?' : 'Cancelar o download deste vídeo?')) api.offline.cancel(vid);
+    if (window.confirm(WEB ? tr('Cancelar a escolha do arquivo?') : tr('Cancelar o download deste vídeo?'))) api.offline.cancel(vid);
     return;
   }
   if (!isYtId(vid)) {
     // Projeto de arquivo: não tem versão online.
     if (!S.offline[vid]) attachFile(p);
-    else toast('Este projeto toca um arquivo salvo neste aparelho');
+    else toast(tr('Este projeto toca um arquivo salvo neste aparelho'));
     return;
   }
   if (p.mode === 'offline') {
     setMode(p, 'online');
-    toast('Online — tocando pelo YouTube');
+    toast(tr('Online — tocando pelo YouTube'));
     return;
   }
   if (S.offline[vid]) {
     setMode(p, 'offline');
-    toast(WEB ? 'Tocando o arquivo salvo neste aparelho' : 'Offline — tocando o vídeo baixado');
+    toast(WEB ? tr('Tocando o arquivo salvo neste aparelho') : tr('Offline — tocando o vídeo baixado'));
     return;
   }
   if (WEB) {
@@ -914,21 +918,21 @@ async function toggleMode() {
     return;
   }
 
-  S.downloads[vid] = { stage: 'Preparando…', percent: null };
+  S.downloads[vid] = { stage: tr('Preparando…'), percent: null };
   updateModeButton();
-  toast('Baixando o vídeo…');
+  toast(tr('Baixando o vídeo…'));
   const res = await api.offline.download(vid);
   delete S.downloads[vid];
   if (res.ok) {
     S.offline[vid] = res.info;
     setMode(p, 'offline');
-    toast(res.hd === false ? 'Baixado em 360p (instale o ffmpeg para HD) — tocando offline' : 'Baixado — tocando offline');
+    toast(res.hd === false ? tr('Baixado em 360p (instale o ffmpeg para HD) — tocando offline') : tr('Baixado — tocando offline'));
   } else if (res.canceled) {
-    toast('Download cancelado');
+    toast(tr('Download cancelado'));
   } else {
     window.alert(
-      `Não foi possível baixar o vídeo.\n\n${res.error}\n\n` +
-        'Se o YouTube pedir para confirmar que você não é um robô, espere um pouco e tente de novo.',
+      `${tr('Não foi possível baixar o vídeo.')}\n\n${tr(res.error)}\n\n` +
+        tr('Se o YouTube pedir para confirmar que você não é um robô, espere um pouco e tente de novo.'),
     );
   }
   updateModeButton();
@@ -946,17 +950,17 @@ function updateGuitarButton() {
   if (!p) return;
   if (job) {
     btn.classList.add('busy');
-    const stage = (job.stage || 'Separando…').replace(/\s*\(.*?\)/g, '');
+    const stage = tr(job.stage || 'Separando…').replace(/\s*\(.*?\)/g, '');
     btn.textContent = job.percent != null ? `⏳ ${stage.replace(/…$/, '')} ${Math.floor(job.percent)}%` : `⏳ ${stage}`;
-    btn.title = `${job.stage || 'Separando a guitarra…'}\nClique para cancelar.`;
+    btn.title = `${tr(job.stage || 'Separando a guitarra…')}\n${tr('Clique para cancelar.')}`;
   } else if (S.stems[p.videoId]) {
     const on = p.guitarOn !== false;
     btn.classList.add(on ? 'on' : 'off');
-    btn.textContent = on ? '🎸 Guitarra: ON' : '🎸 Guitarra: OFF';
-    btn.title = `${on ? 'Clique para tirar' : 'Clique para voltar'} a guitarra do áudio (G).`;
+    btn.textContent = on ? tr('🎸 Guitarra: ON') : tr('🎸 Guitarra: OFF');
+    btn.title = on ? tr('Clique para tirar a guitarra do áudio (G).') : tr('Clique para voltar a guitarra do áudio (G).');
   } else {
-    btn.textContent = '🎸 Separar guitarra';
-    btn.title = 'Separa a trilha de guitarra do áudio com IA (Demucs), para poder ligar e desligar a guitarra.\nLeva alguns minutos por música.';
+    btn.textContent = tr('🎸 Separar guitarra');
+    btn.title = tr('Separa a trilha de guitarra do áudio com IA (Demucs), para poder ligar e desligar a guitarra.\nLeva alguns minutos por música.');
   }
 }
 
@@ -965,7 +969,7 @@ async function onGuitarButton() {
   if (!p) return;
   const vid = p.videoId;
   if (S.separating[vid]) {
-    if (window.confirm('Cancelar a separação da guitarra?')) api.stems.cancel(vid);
+    if (window.confirm(tr('Cancelar a separação da guitarra?'))) api.stems.cancel(vid);
     return;
   }
   if (p.mode !== 'offline') return;
@@ -977,13 +981,12 @@ async function onGuitarButton() {
   if (
     !envReady &&
     !window.confirm(
-      'Na primeira vez o app instala o separador de áudio (Demucs + PyTorch, cerca de 1 GB em %APPDATA%/solotracker/stems-env). ' +
-        'É preciso ter o Python 3.9–3.12 instalado.\n\nContinuar?',
+      tr('Na primeira vez o app instala o separador de áudio (Demucs + PyTorch, cerca de 1 GB em %APPDATA%/solotracker/stems-env). É preciso ter o Python 3.9–3.12 instalado.\n\nContinuar?'),
     )
   ) {
     return;
   }
-  S.separating[vid] = { stage: 'Preparando…', percent: null };
+  S.separating[vid] = { stage: tr('Preparando…'), percent: null };
   updateGuitarButton();
   const res = await api.stems.separate(vid);
   delete S.separating[vid];
@@ -991,11 +994,11 @@ async function onGuitarButton() {
     S.stems[vid] = true;
     const cur = project();
     if (cur && cur.videoId === vid && cur.mode === 'offline') loadPlayer(cur, nowTime(), !S.paused);
-    toast('Guitarra separada — use G para ligar/desligar');
+    toast(tr('Guitarra separada — use G para ligar/desligar'));
   } else if (res.canceled) {
-    toast('Separação cancelada');
+    toast(tr('Separação cancelada'));
   } else {
-    window.alert(`Não foi possível separar a guitarra.\n\n${res.error}`);
+    window.alert(`${tr('Não foi possível separar a guitarra.')}\n\n${tr(res.error)}`);
   }
   updateGuitarButton();
   if (libraryOpen()) renderLibrary();
@@ -1004,18 +1007,18 @@ async function onGuitarButton() {
 function toggleGuitar() {
   const p = project();
   if (!api.stems) {
-    toast('Separar a guitarra só funciona no app para PC');
+    toast(tr('Separar a guitarra só funciona no app para PC'));
     return;
   }
   if (!p || p.mode !== 'offline' || !S.stems[p.videoId]) {
-    toast(p && p.mode === 'offline' ? 'Separe a guitarra primeiro (botão 🎸)' : 'Disponível só no modo offline');
+    toast(p && p.mode === 'offline' ? tr('Separe a guitarra primeiro (botão 🎸)') : tr('Disponível só no modo offline'));
     return;
   }
   p.guitarOn = p.guitarOn === false;
   send('setGuitar', { on: p.guitarOn });
   touch();
   updateGuitarButton();
-  toast(p.guitarOn ? 'Guitarra ligada' : 'Guitarra desligada');
+  toast(p.guitarOn ? tr('Guitarra ligada') : tr('Guitarra desligada'));
 }
 
 /** Apaga o arquivo baixado (e as trilhas separadas); projetos desse vídeo em modo offline voltam para online. */
@@ -1062,8 +1065,8 @@ function deleteProject(id) {
   // O vídeo baixado é apagado junto se nenhum outro projeto usa o mesmo vídeo.
   const lastUser =
     S.offline[p.videoId] && !Object.values(S.store.projects).some((o) => o.id !== id && o.videoId === p.videoId);
-  const fileNote = lastUser ? ` O ${FILE_WORD} (${fmtSize(S.offline[p.videoId].size)}) também será apagado.` : '';
-  if (!window.confirm(`Excluir o projeto "${p.name}" e seus ${p.sections.length} trecho(s)?${fileNote}`)) return;
+  const fileNote = lastUser ? ` ${tr('O {file} ({size}) também será apagado.', { file: FILE_WORD, size: fmtSize(S.offline[p.videoId].size) })}` : '';
+  if (!window.confirm(tr('Excluir o projeto "{name}" e seus {n} trecho(s)?', { name: p.name, n: p.sections.length }) + fileNote)) return;
   delete S.store.projects[id];
   if (S.projectId === id) closeCurrentProjectView();
   if (lastUser) removeOfflineFile(p.videoId);
@@ -1091,12 +1094,12 @@ function exportData(p) {
 
 async function exportProject(p) {
   if (!p) return;
-  const ok = await api.exportProject(p.name, exportData(p));
-  if (ok) toast('Projeto exportado');
+  const ok = await api.exportProject(p.name, exportData(p), I18N.lang);
+  if (ok) toast(tr('Projeto exportado'));
 }
 
 async function importProjects() {
-  const files = await api.importProjects();
+  const files = await api.importProjects(I18N.lang);
   const num = (v) => (Number.isFinite(Number(v)) ? Number(v) : null);
   let imported = 0;
   let lastId = null;
@@ -1112,18 +1115,18 @@ async function importProjects() {
       p.fileName = String(src.localFile).slice(0, 300);
     }
     p.sections = (Array.isArray(src.sections) ? src.sections : [])
-      .map((s) => ({ id: uid(), name: String(s.name || 'Trecho').slice(0, 200), a: num(s.a), b: num(s.b), rate: clamp(num(s.rate) || 1, RATE_MIN, RATE_MAX) }))
+      .map((s) => ({ id: uid(), name: String(s.name || tr('Trecho')).slice(0, 200), a: num(s.a), b: num(s.b), rate: clamp(num(s.rate) || 1, RATE_MIN, RATE_MAX) }))
       .filter((s) => s.a != null && s.b != null && s.b > s.a && s.a >= 0);
-    p.sections.forEach((s, i) => { if (!s.name) s.name = `Trecho ${i + 1}`; });
+    p.sections.forEach((s, i) => { if (!s.name) s.name = tr('Trecho {n}', { n: i + 1 }); });
     S.store.projects[p.id] = p;
     lastId = p.id;
     imported += 1;
   });
-  if (files.length && !imported) toast('Nenhum projeto válido nos arquivos');
+  if (files.length && !imported) toast(tr('Nenhum projeto válido nos arquivos'));
   if (imported) {
     saveSoon();
     renderLibrary();
-    toast(`${imported} projeto(s) importado(s)`);
+    toast(tr('{n} projeto(s) importado(s)', { n: imported }));
     if (imported === 1) {
       closeLibrary();
       openProject(lastId);
@@ -1153,45 +1156,49 @@ function renderLibrary() {
   const list = $('libList');
   list.innerHTML = '';
   $('libEmpty').classList.toggle('hidden', items.length > 0);
-  $('libEmpty').textContent = all.length ? 'Nenhum projeto encontrado.' : 'Nenhum projeto ainda. Crie um com um link do YouTube.';
+  $('libEmpty').textContent = all.length
+    ? tr('Nenhum projeto encontrado.')
+    : WEB
+      ? tr('Nenhum projeto ainda. Crie um com um link do YouTube ou com 📂 Arquivo (vídeo ou música do aparelho).')
+      : tr('Nenhum projeto ainda. Crie um com um link do YouTube.');
 
   items.forEach((p) => {
     const li = document.createElement('li');
     li.className = `lib-item${p.id === S.projectId ? ' active' : ''}`;
-    const date = new Date(p.updated).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    const date = new Date(p.updated).toLocaleDateString(I18N.locale, { day: '2-digit', month: '2-digit', year: 'numeric' });
     const sectionsPreview = p.sections.slice(0, 4).map((s) => escapeHtml(s.name)).join(' · ');
     const file = S.offline[p.videoId];
     const yt = isYtId(p.videoId);
     let offlineTag = '';
     if (WEB) {
-      if (file) offlineTag = `<span class="offline-tag">📂 ${yt && p.mode !== 'offline' ? 'salvo' : 'arquivo'} (${fmtSize(file.size)})</span> · `;
-      else if (!yt) offlineTag = '<span class="missing-tag">📂 arquivo não está neste aparelho</span> · ';
+      if (file) offlineTag = `<span class="offline-tag">📂 ${yt && p.mode !== 'offline' ? tr('salvo') : tr('arquivo')} (${fmtSize(file.size)})</span> · `;
+      else if (!yt) offlineTag = `<span class="missing-tag">📂 ${tr('arquivo não está neste aparelho')}</span> · `;
     } else if (file) {
-      offlineTag = `<span class="offline-tag">${p.mode === 'offline' ? '💾 offline' : '💾 baixado'} (${fmtSize(file.size)})${S.stems[p.videoId] ? ' · 🎸 separada' : ''}</span> · `;
+      offlineTag = `<span class="offline-tag">${p.mode === 'offline' ? '💾 offline' : tr('💾 baixado')} (${fmtSize(file.size)})${S.stems[p.videoId] ? tr(' · 🎸 separada') : ''}</span> · `;
     }
     const rmTitle = WEB
       ? yt
-        ? 'Apagar o arquivo salvo neste aparelho (o projeto volta a tocar pelo YouTube)'
-        : 'Apagar o arquivo salvo neste aparelho (os trechos continuam)'
-      : 'Apagar o vídeo baixado (o projeto volta a tocar pelo YouTube)';
+        ? tr('Apagar o arquivo salvo neste aparelho (o projeto volta a tocar pelo YouTube)')
+        : tr('Apagar o arquivo salvo neste aparelho (os trechos continuam)')
+      : tr('Apagar o vídeo baixado (o projeto volta a tocar pelo YouTube)');
     li.innerHTML = `
       ${yt ? `<img alt="" src="https://i.ytimg.com/vi/${p.videoId}/mqdefault.jpg" />` : '<div class="lib-thumb">🎵</div>'}
       <div class="info">
         <span class="name">${escapeHtml(p.name)}</span>
         <span class="muted small-text">${escapeHtml(p.videoTitle && p.videoTitle !== p.name ? p.videoTitle : '')}</span>
-        <span class="small-text meta">${offlineTag}${p.sections.length} trecho(s) · ${date}${sectionsPreview ? ` · <span class="muted">${sectionsPreview}${p.sections.length > 4 ? '…' : ''}</span>` : ''}</span>
+        <span class="small-text meta">${offlineTag}${tr('{n} trecho(s)', { n: p.sections.length })} · ${date}${sectionsPreview ? ` · <span class="muted">${sectionsPreview}${p.sections.length > 4 ? '…' : ''}</span>` : ''}</span>
       </div>
-      ${file ? `<button class="btn tiny" data-act="rmfile" title="${rmTitle}">🗑 ${WEB ? 'arquivo' : 'vídeo'}</button>` : ''}
-      <button class="btn tiny" data-act="rename" title="Renomear">✎</button>
-      <button class="btn tiny" data-act="export" title="Exportar para arquivo">⤓</button>
-      <button class="btn tiny danger" data-act="delete" title="Excluir projeto">✕</button>
+      ${file ? `<button class="btn tiny" data-act="rmfile" title="${rmTitle}">🗑 ${WEB ? tr('arquivo') : tr('vídeo')}</button>` : ''}
+      <button class="btn tiny" data-act="rename" title="${tr('Renomear')}">✎</button>
+      <button class="btn tiny" data-act="export" title="${tr('Exportar para arquivo')}">⤓</button>
+      <button class="btn tiny danger" data-act="delete" title="${tr('Excluir projeto')}">✕</button>
     `;
     li.addEventListener('click', (e) => {
       if (e.target.closest('input')) return;
       const act = e.target.closest('[data-act]')?.dataset.act;
       if (act === 'delete') deleteProject(p.id);
       else if (act === 'rmfile') {
-        if (window.confirm(`Apagar o ${FILE_WORD} de "${p.name}" (${fmtSize(file.size)})?`)) removeOfflineFile(p.videoId);
+        if (window.confirm(tr('Apagar o {file} de "{name}" ({size})?', { file: FILE_WORD, name: p.name, size: fmtSize(file.size) }))) removeOfflineFile(p.videoId);
       } else if (act === 'export') exportProject(p);
       else if (act === 'rename') startProjectRename(li, p);
       else {
@@ -1247,7 +1254,7 @@ api.onEvent((ev) => {
       applyLoop({ save: false });
       break;
     case 'stems-error':
-      toast('Não foi possível carregar as trilhas separadas — tocando o áudio original');
+      toast(tr('Não foi possível carregar as trilhas separadas — tocando o áudio original'));
       break;
     case 'status': {
       const now = performance.now();
@@ -1274,10 +1281,10 @@ api.onEvent((ev) => {
     }
     case 'rate-limited':
       // YouTube na web: a API só aceita algumas velocidades.
-      toast(`O YouTube tocou a ${Math.round(ev.actual * 100)}% (mais próxima). Use um arquivo para velocidade livre`, 3500);
+      toast(tr('O YouTube tocou a {pct}% (mais próxima). Use um arquivo para velocidade livre', { pct: Math.round(ev.actual * 100) }), 3500);
       break;
     case 'need-tap':
-      toast(TOUCH ? 'Toque no vídeo para começar' : 'Clique no vídeo para começar', 3000);
+      toast(TOUCH ? tr('Toque no vídeo para começar') : tr('Clique no vídeo para começar'), 3000);
       break;
     case 'meta': {
       $('videoTitle').textContent = ev.title;
@@ -1300,7 +1307,7 @@ api.onEvent((ev) => {
       const el = $('gapBadge');
       S.inGap = ev.active;
       if (ev.active) {
-        el.textContent = 'Prepare-se…';
+        el.textContent = tr('Prepare-se…');
         el.classList.remove('hidden');
       } else {
         el.classList.add('hidden');
@@ -1312,7 +1319,7 @@ api.onEvent((ev) => {
       const box = $('errorBox');
       box.innerHTML = '';
       const msg = document.createElement('p');
-      msg.textContent = ev.message;
+      msg.textContent = tr(ev.message);
       const hint = document.createElement('p');
       hint.className = 'muted';
       const btn = document.createElement('button');
@@ -1320,32 +1327,32 @@ api.onEvent((ev) => {
       const alt = document.createElement('button');
       alt.className = 'btn';
       if (p && WEB && (p.mode === 'offline' || !isYtId(p.videoId))) {
-        hint.textContent = 'O navegador não conseguiu tocar este arquivo (formato não suportado?). Escolha outro arquivo.';
-        btn.textContent = '📂 Escolher outro arquivo';
+        hint.textContent = tr('O navegador não conseguiu tocar este arquivo (formato não suportado?). Escolha outro arquivo.');
+        btn.textContent = tr('📂 Escolher outro arquivo');
         btn.onclick = () => attachFile(p);
-        alt.textContent = '▶ Tocar pelo YouTube';
+        alt.textContent = tr('▶ Tocar pelo YouTube');
         alt.onclick = () => setMode(p, 'online');
         box.append(msg, hint, btn);
         if (isYtId(p.videoId)) box.append(alt);
       } else if (p && p.mode === 'offline') {
-        hint.textContent = 'O arquivo pode estar corrompido. Volte para o YouTube ou apague e baixe de novo pela Biblioteca.';
-        btn.textContent = '🌐 Tocar pelo YouTube';
+        hint.textContent = tr('O arquivo pode estar corrompido. Volte para o YouTube ou apague e baixe de novo pela Biblioteca.');
+        btn.textContent = tr('🌐 Tocar pelo YouTube');
         btn.onclick = () => setMode(p, 'online');
         box.append(msg, hint, btn);
       } else if (WEB) {
         hint.textContent =
-          'Alguns vídeos não permitem reprodução fora do YouTube. Você pode tocar um arquivo de vídeo ou áudio salvo neste aparelho.';
-        btn.textContent = 'Abrir no YouTube';
+          tr('Alguns vídeos não permitem reprodução fora do YouTube. Você pode tocar um arquivo de vídeo ou áudio salvo neste aparelho.');
+        btn.textContent = tr('Abrir no YouTube');
         btn.onclick = () => p && api.openExternal(`https://www.youtube.com/watch?v=${p.videoId}`);
-        alt.textContent = S.offline[p?.videoId] ? '📂 Tocar o arquivo salvo' : '📂 Usar um arquivo do aparelho';
+        alt.textContent = S.offline[p?.videoId] ? tr('📂 Tocar o arquivo salvo') : tr('📂 Usar um arquivo do aparelho');
         alt.onclick = () => toggleMode();
         box.append(msg, hint, alt, btn);
       } else {
         hint.textContent =
-          'Alguns vídeos não permitem reprodução incorporada, e o YouTube pode bloquear o acesso temporariamente. Baixar o vídeo costuma resolver.';
-        btn.textContent = 'Abrir no YouTube';
+          tr('Alguns vídeos não permitem reprodução incorporada, e o YouTube pode bloquear o acesso temporariamente. Baixar o vídeo costuma resolver.');
+        btn.textContent = tr('Abrir no YouTube');
         btn.onclick = () => p && api.openExternal(`https://www.youtube.com/watch?v=${p.videoId}`);
-        alt.textContent = S.offline[p?.videoId] ? '💾 Tocar offline' : '💾 Baixar e tocar offline';
+        alt.textContent = S.offline[p?.videoId] ? tr('💾 Tocar offline') : tr('💾 Baixar e tocar offline');
         alt.onclick = () => toggleMode();
         box.append(msg, hint, alt, btn);
       }
@@ -1492,7 +1499,7 @@ document.addEventListener('keydown', (e) => {
       break;
     case 'Enter':
       if (S.capture) captureMark();
-      else toast('Pressione N para criar um novo trecho');
+      else toast(tr('Pressione N para criar um novo trecho'));
       break;
     case 'Escape':
       if (S.capture) cancelCapture();
@@ -1640,7 +1647,7 @@ function bindUi() {
   $('btnFwd').onclick = () => seekBy(settings().step);
   $('btnToA').onclick = goToA;
   $('btnNewSection').onclick = () => {
-    if (!project()) return toast('Abra um projeto primeiro');
+    if (!project()) return toast(tr('Abra um projeto primeiro'));
     if (S.capture) captureMark();
     else startCapture();
     return undefined;
@@ -1693,6 +1700,8 @@ function bindUi() {
     });
   });
 
+  setupLanguagePicker();
+
   // Treino progressivo
   const t = S.store.trainer;
   $('trainerOn').checked = false; // sempre começa desligado
@@ -1720,6 +1729,35 @@ function bindUi() {
     }
     updateTrainerStatus();
   });
+}
+
+/** Escolha do idioma (Configurações). Trocar recarrega a interface. */
+function setupLanguagePicker() {
+  const label = document.createElement('label');
+  label.htmlFor = 'setLang';
+  label.textContent = 'Idioma / Language';
+  const select = document.createElement('select');
+  select.id = 'setLang';
+  select.className = 'web-select';
+  [
+    ['', `Auto (${I18N.autoLang === 'en' ? 'EN' : 'PT'})`],
+    ['pt', 'Português'],
+    ['en', 'English'],
+  ].forEach(([value, text]) => {
+    const o = document.createElement('option');
+    o.value = value;
+    o.textContent = text;
+    select.append(o);
+  });
+  select.value = I18N.forced;
+  select.addEventListener('change', async () => {
+    I18N.setLang(select.value);
+    S.store.settings.lang = select.value;
+    clearTimeout(saveTimer);
+    await api.saveStore(S.store);
+    location.reload();
+  });
+  $('settingsGrid').prepend(label, select);
 }
 
 // ---------------------------------------------------------------- loop de renderização

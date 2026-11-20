@@ -12,6 +12,7 @@
   const root = document.documentElement;
   const isMobile = root.classList.contains('mobile');
   const byId = (id) => document.getElementById(id);
+  const tr = window.tr || ((x) => x);
   const make = (tag, props = {}, children = []) => {
     const el = Object.assign(document.createElement(tag), props);
     children.forEach((c) => el.append(c));
@@ -22,8 +23,8 @@
   const grid = byId('settingsGrid');
   if (grid) {
     const select = make('select', { id: 'setLayout', className: 'web-select' }, [
-      make('option', { value: '', textContent: `Automático (${api.layoutAuto === 'mobile' ? 'celular' : 'PC'})` }),
-      make('option', { value: 'mobile', textContent: 'Celular' }),
+      make('option', { value: '', textContent: `${tr('Automático')} (${api.layoutAuto === 'mobile' ? tr('celular') : 'PC'})` }),
+      make('option', { value: 'mobile', textContent: tr('Celular') }),
       make('option', { value: 'desktop', textContent: 'PC' }),
     ]);
     select.value = api.layoutForced || '';
@@ -31,11 +32,8 @@
       api.setLayout(select.value);
       location.reload();
     });
-    grid.append(make('label', { htmlFor: 'setLayout', title: 'Layout da tela. Automático detecta celular ou PC.', textContent: 'Layout' }), select);
+    grid.append(make('label', { htmlFor: 'setLayout', title: tr('Layout da tela. Automático detecta celular ou PC.'), textContent: 'Layout' }), select);
   }
-
-  const libEmpty = byId('libEmpty');
-  if (libEmpty) libEmpty.textContent = 'Nenhum projeto ainda. Crie um com um link do YouTube ou com 📂 Arquivo (vídeo ou música do aparelho).';
 
   if (!isMobile) return;
 
@@ -44,10 +42,10 @@
   const controls = document.querySelector('.stage .controls');
   const TAB_KEY = 'solotracker-tab';
   const tabs = [
-    { id: 'controls', label: '🎛 Controles' },
-    { id: 'sections', label: '📌 Trechos' },
-    { id: 'trainer', label: '📈 Treino' },
-    { id: 'settings', label: '⚙ Ajustes' },
+    { id: 'controls', label: tr('🎛 Controles') },
+    { id: 'sections', label: tr('📌 Trechos') },
+    { id: 'trainer', label: tr('📈 Treino') },
+    { id: 'settings', label: tr('⚙ Ajustes') },
   ];
 
   if (sidebar && controls) {
@@ -97,7 +95,7 @@
       let count = list.children.length;
       new MutationObserver(() => {
         const n = list.children.length;
-        if (n > count && byId('btnNewSection')?.textContent.includes('Novo')) {
+        if (n > count && byId('btnNewSection')?.textContent === tr('＋ Novo trecho')) {
           buttons.find((b) => b.dataset.tab === 'sections')?.classList.add('ping');
           setTimeout(() => buttons.forEach((b) => b.classList.remove('ping')), 1600);
         }
@@ -110,7 +108,7 @@
   const lib = byId('btnLibrary');
   if (lib) {
     lib.textContent = '📚';
-    lib.title = 'Biblioteca de projetos';
+    lib.title = tr('Biblioteca de projetos');
   }
 
   // Tela cheia (Android). No iPhone não existe: sugere "Adicionar à Tela de Início".
@@ -118,10 +116,10 @@
   const canFs = !!(root.requestFullscreen || root.webkitRequestFullscreen);
   const topbar = document.querySelector('.topbar');
   if (topbar && !standalone) {
-    const fs = make('button', { type: 'button', className: 'btn small m-fs', textContent: '⛶', title: 'Tela cheia' });
+    const fs = make('button', { type: 'button', className: 'btn small m-fs', textContent: '⛶', title: tr('Tela cheia') });
     fs.addEventListener('click', async () => {
       if (!canFs) {
-        alert('No iPhone, para usar em tela cheia: toque em Compartilhar e depois em "Adicionar à Tela de Início". Abra o SoloTracker pelo ícone criado.');
+        alert(tr('No iPhone, para usar em tela cheia: toque em Compartilhar e depois em "Adicionar à Tela de Início". Abra o SoloTracker pelo ícone criado.'));
         return;
       }
       try {
@@ -144,13 +142,13 @@
   if (ph && link) {
     // Mantém o mesmo <a> (o app.js já ligou o clique nele).
     const [p1, p2] = ph.querySelectorAll('p');
-    link.textContent = '📚 Biblioteca';
-    p1.replaceChildren('Abra a ', link, ' para criar um projeto com um link do YouTube ou um arquivo do celular.');
-    if (p2) p2.textContent = 'Arraste sobre o vídeo para avançar/voltar • Toque para play/pause';
+    link.textContent = tr('📚 Biblioteca');
+    p1.replaceChildren(`${tr('Abra a')} `, link, ` ${tr('para criar um projeto com um link do YouTube ou um arquivo do celular.')}`);
+    if (p2) p2.textContent = tr('Arraste sobre o vídeo para avançar/voltar • Toque para play/pause');
   }
   const empty = byId('sectionListEmpty');
   if (empty) {
-    empty.textContent = 'Nenhum trecho ainda. Na aba Controles, toque em "＋ Novo trecho", depois toque no início e no fim do trecho.';
+    empty.textContent = tr('Nenhum trecho ainda. Na aba Controles, toque em "＋ Novo trecho", depois toque no início e no fim do trecho.');
   }
   const jog = byId('jogOverlay');
   if (jog) jog.title = '';
@@ -167,8 +165,8 @@
     const hint = make('div', { className: 'm-rotate' }, [
       make('div', { className: 'm-rotate-card' }, [
         make('div', { className: 'm-rotate-icon', textContent: '📱↻' }),
-        make('p', { textContent: 'Gire o celular para usar deitado.' }),
-        make('button', { type: 'button', className: 'btn', textContent: 'Continuar assim' }),
+        make('p', { textContent: tr('Gire o celular para usar deitado.') }),
+        make('button', { type: 'button', className: 'btn', textContent: tr('Continuar assim') }),
       ]),
     ]);
     hint.querySelector('button').addEventListener('click', () => {
