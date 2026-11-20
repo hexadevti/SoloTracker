@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' https://i.ytimg.com data:; frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com;" />
+  <title>SoloTracker</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">Solo<span>Tracker</span></div>
+    <button id="btnLibrary" class="btn" title="Biblioteca de projetos (Ctrl+O)">📚 Biblioteca</button>
+    <div class="project-box" id="projectBox">
+      <input id="projectName" type="text" spellcheck="false" autocomplete="off" placeholder="Nome da música" title="Nome do projeto (clique para editar)" disabled />
+      <span id="saveState" class="save-state"></span>
+      <button id="btnMode" class="btn small mode-btn" disabled>🌐 Online</button>
+      <button id="btnGuitar" class="btn small guitar-btn hidden">🎸 Separar guitarra</button>
+      <button id="btnExport" class="btn small" title="Exportar este projeto para um arquivo" disabled>⤓ Exportar</button>
+    </div>
+    <form id="urlForm" class="url-form">
+      <input id="urlInput" type="text" spellcheck="false" autocomplete="off"
+             placeholder="Cole um link do YouTube para abrir ou criar um projeto" />
+      <button type="submit" class="btn primary">Abrir</button>
+    </form>
+  </header>
+
+  <main class="layout">
+    <section class="stage">
+      <div id="videoWrap" class="video-wrap">
+        <div id="placeholder" class="placeholder">
+          <p>Cole um link do YouTube acima ou abra um projeto na <a href="#" id="placeholderLibrary">Biblioteca</a>.</p>
+          <p class="muted">Arraste sobre o vídeo para avançar/voltar • Clique para play/pause • <kbd>N</kbd> cria um trecho, <kbd>Enter</kbd> marca início e fim</p>
+        </div>
+        <iframe id="ytFrame" class="hidden" allow="autoplay; encrypted-media"
+                referrerpolicy="strict-origin-when-cross-origin"></iframe>
+        <div id="jogOverlay" class="jog-overlay hidden" title="Arraste para avançar/voltar • Clique para play/pause"></div>
+        <div id="captureBanner" class="capture-banner hidden"></div>
+        <div id="jogBadge" class="jog-badge hidden"></div>
+        <div id="gapBadge" class="gap-badge hidden"></div>
+        <div id="errorBox" class="error-box hidden"></div>
+      </div>
+
+      <div class="time-row">
+        <span id="timeNow" class="time-now">0:00.00</span>
+        <span class="muted">/</span>
+        <span id="timeDur" class="muted">0:00</span>
+        <span id="videoTitle" class="video-title"></span>
+        <span id="activeSection" class="active-section hidden"></span>
+        <span id="repCounter" class="rep-counter hidden"></span>
+      </div>
+
+      <div class="timeline-block">
+        <div id="timelineFull" class="timeline"></div>
+        <div id="zoomWrap" class="zoom-wrap hidden">
+          <div class="zoom-label">Zoom do loop</div>
+          <div id="timelineZoom" class="timeline zoom"></div>
+        </div>
+      </div>
+
+      <div class="controls">
+        <div class="group transport">
+          <button id="btnToA" class="btn icon" title="Voltar ao início do trecho (Backspace / Home / R)">⏮</button>
+          <button id="btnBack" class="btn icon" title="Voltar (←)">⟲</button>
+          <button id="btnPlay" class="btn icon big" title="Play/Pause (Espaço)">▶</button>
+          <button id="btnFwd" class="btn icon" title="Avançar (→)">⟳</button>
+          <div class="volume">
+            <span>🔊</span>
+            <input id="volume" type="range" min="0" max="100" value="100" />
+          </div>
+        </div>
+
+        <div class="group speed">
+          <label>Velocidade</label>
+          <button id="speedDown" class="btn small" title="−5% (− ou ↓)">−</button>
+          <input id="speedRange" type="range" min="25" max="150" step="1" value="100" />
+          <button id="speedUp" class="btn small" title="+5% (= ou ↑)">+</button>
+          <span id="speedValue" class="speed-value">100%</span>
+          <div class="presets" id="speedPresets"></div>
+        </div>
+
+        <div class="group loop">
+          <button id="btnNewSection" class="btn primary" title="Novo trecho: depois use Enter para marcar início e fim (N)">＋ Novo trecho</button>
+          <div class="loop-point">
+            <button id="btnSetA" class="btn" title="Marcar início no tempo atual (A ou [)">Marcar A</button>
+            <button class="btn small nudge" data-nudge="a" data-dir="-1" title="Mover A para trás">−</button>
+            <span id="loopA" class="loop-time">--</span>
+            <button class="btn small nudge" data-nudge="a" data-dir="1" title="Mover A para frente">+</button>
+          </div>
+          <div class="loop-point">
+            <button id="btnSetB" class="btn" title="Marcar fim no tempo atual (B ou ])">Marcar B</button>
+            <button class="btn small nudge" data-nudge="b" data-dir="-1" title="Mover B para trás">−</button>
+            <span id="loopB" class="loop-time">--</span>
+            <button class="btn small nudge" data-nudge="b" data-dir="1" title="Mover B para frente">+</button>
+          </div>
+          <button id="btnLoop" class="btn toggle" title="Liga/desliga loop (L)">Loop: OFF</button>
+          <button id="btnClearLoop" class="btn" title="Limpar loop (Esc)">Limpar</button>
+        </div>
+      </div>
+    </section>
+
+    <aside class="sidebar">
+      <details open class="panel" data-pane="sections">
+        <summary>Trechos do projeto</summary>
+        <ul id="sectionList" class="loop-list"></ul>
+        <p id="sectionListEmpty" class="muted small-text">Nenhum trecho ainda. Pressione <kbd>N</kbd> e depois <kbd>Enter</kbd> no início e <kbd>Enter</kbd> no fim do trecho.</p>
+      </details>
+
+      <details open class="panel" data-pane="trainer">
+        <summary>Treino progressivo</summary>
+        <p class="muted small-text">Aumenta a velocidade automaticamente a cada N repetições do loop.</p>
+        <label class="check"><input id="trainerOn" type="checkbox" /> Ativar</label>
+        <div class="form-grid">
+          <label>Começar em (%)</label><input id="trainerStart" type="number" min="25" max="150" value="60" />
+          <label>Aumentar (%)</label><input id="trainerStep" type="number" min="1" max="50" value="5" />
+          <label>A cada (repetições)</label><input id="trainerEvery" type="number" min="1" max="50" value="3" />
+          <label>Até (%)</label><input id="trainerTarget" type="number" min="25" max="150" value="100" />
+        </div>
+        <div id="trainerStatus" class="trainer-status muted small-text"></div>
+      </details>
+
+      <details class="panel" data-pane="settings">
+        <summary>Configurações</summary>
+        <div id="settingsGrid" class="form-grid">
+          <label title="Setas ← →">Passo das setas (s)</label><input id="setStep" type="number" min="0.1" step="0.1" value="2" />
+          <label title="Shift + ← →">Passo grande (s)</label><input id="setBigStep" type="number" min="0.5" step="0.5" value="10" />
+          <label title="Ctrl + ← →, botões − + do loop e roda do mouse">Passo fino (s)</label><input id="setFineStep" type="number" min="0.01" step="0.01" value="0.1" />
+          <label title="Quantos segundos andam a cada 100px arrastados sobre o vídeo">Sensibilidade do arraste (s/100px)</label><input id="setJog" type="number" min="0.1" step="0.1" value="2" />
+          <label title="Pausa antes de repetir o loop">Pausa entre repetições (s)</label><input id="setGap" type="number" min="0" step="0.5" value="0" />
+          <label title="Volta alguns segundos antes do A ao iniciar o loop">Pré-roll ao ir para A (s)</label><input id="setPreroll" type="number" min="0" step="0.5" value="0" />
+        </div>
+      </details>
+
+      <details class="panel" data-pane="shortcuts">
+        <summary>Atalhos</summary>
+        <table class="shortcuts">
+          <tr><td><kbd>N</kbd></td><td>Novo trecho</td></tr>
+          <tr><td><kbd>Enter</kbd></td><td>Marca início e depois fim do novo trecho</td></tr>
+          <tr><td><kbd>Esc</kbd></td><td>Cancela novo trecho / limpa loop</td></tr>
+          <tr><td><kbd>1</kbd>…<kbd>9</kbd> <kbd>0</kbd></td><td>Pular para o trecho 1…10</td></tr>
+          <tr><td><kbd>Espaço</kbd></td><td>Play / Pause</td></tr>
+          <tr><td><kbd>←</kbd> <kbd>→</kbd></td><td>Voltar / avançar (passo)</td></tr>
+          <tr><td><kbd>Shift</kbd>+<kbd>←</kbd><kbd>→</kbd></td><td>Passo grande</td></tr>
+          <tr><td><kbd>Ctrl</kbd>+<kbd>←</kbd><kbd>→</kbd></td><td>Passo fino</td></tr>
+          <tr><td><kbd>=</kbd> <kbd>-</kbd> / <kbd>↑</kbd> <kbd>↓</kbd></td><td>Velocidade ±5% (salva no trecho)</td></tr>
+          <tr><td><kbd>A</kbd> / <kbd>B</kbd></td><td>Ajustar início / fim no tempo atual</td></tr>
+          <tr><td><kbd>L</kbd></td><td>Liga/desliga loop</td></tr>
+          <tr><td><kbd>G</kbd></td><td>Liga/desliga a guitarra (offline, trilhas separadas)</td></tr>
+          <tr><td><kbd>Backspace</kbd> / <kbd>Home</kbd> / <kbd>R</kbd></td><td>Voltar ao início do trecho</td></tr>
+          <tr><td><kbd>Ctrl</kbd>+<kbd>O</kbd></td><td>Biblioteca de projetos</td></tr>
+        </table>
+      </details>
+    </aside>
+  </main>
+
+  <!-- Biblioteca de projetos -->
+  <div id="libraryModal" class="modal hidden">
+    <div class="modal-card">
+      <header class="modal-head">
+        <h2>Biblioteca</h2>
+        <input id="libSearch" type="text" placeholder="Buscar música…" spellcheck="false" />
+        <button id="libImport" class="btn" title="Importar projetos de arquivos .json">⤒ Importar</button>
+        <button id="libNewFile" class="btn hidden" title="Novo projeto a partir de um arquivo de vídeo ou áudio deste aparelho">📂 Arquivo</button>
+        <button id="libClose" class="btn icon" title="Fechar (Esc)">✕</button>
+      </header>
+      <form id="newProjectForm" class="new-project">
+        <input id="newProjUrl" type="text" placeholder="Link do YouTube" spellcheck="false" />
+        <input id="newProjName" type="text" placeholder="Nome da música (opcional)" spellcheck="false" />
+        <button type="submit" class="btn primary">＋ Novo projeto</button>
+      </form>
+      <ul id="libList" class="lib-list"></ul>
+      <p id="libEmpty" class="muted lib-empty">Nenhum projeto ainda. Crie um com um link do YouTube.</p>
+    </div>
+  </div>
+
+  <script src="timeline.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

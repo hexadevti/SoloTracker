@@ -1,0 +1,54 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "SoloTracker: Main",
+      "type": "node",
+      "request": "launch",
+      "cwd": "${workspaceFolder}",
+      "runtimeExecutable": "${workspaceFolder}/node_modules/.bin/electron",
+      "windows": {
+        "runtimeExecutable": "${workspaceFolder}/node_modules/.bin/electron.cmd"
+      },
+      "args": [".", "--remote-debugging-port=9223"],
+      "env": {
+        // O VS Code pode herdar essa variável; com ela o Electron roda como Node puro, sem janela.
+        "ELECTRON_RUN_AS_NODE": null
+      },
+      "outputCapture": "std",
+      "skipFiles": ["<node_internals>/**"]
+    },
+    {
+      "name": "SoloTracker: Renderer",
+      "type": "chrome",
+      "request": "attach",
+      "port": 9223,
+      "webRoot": "${workspaceFolder}/src/renderer",
+      "timeout": 30000
+    },
+    {
+      "name": "SoloTracker: Main + debug da janela (DevTools)",
+      "type": "node",
+      "request": "launch",
+      "cwd": "${workspaceFolder}",
+      "runtimeExecutable": "${workspaceFolder}/node_modules/.bin/electron",
+      "windows": {
+        "runtimeExecutable": "${workspaceFolder}/node_modules/.bin/electron.cmd"
+      },
+      "args": ["."],
+      "env": {
+        "ELECTRON_RUN_AS_NODE": null,
+        "SOLOTRACKER_DEBUG": "1"
+      },
+      "outputCapture": "std",
+      "skipFiles": ["<node_internals>/**"]
+    }
+  ],
+  "compounds": [
+    {
+      "name": "SoloTracker: Debug completo (Main + Renderer)",
+      "configurations": ["SoloTracker: Main", "SoloTracker: Renderer"],
+      "stopAll": true
+    }
+  ]
+}

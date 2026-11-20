@@ -1,0 +1,16 @@
+{
+  "name": "solotracker",
+  "version": "0.1.0",
+  "description": "Player de YouTube para estudar solos de guitarra: loops A-B, velocidade, scrub e atalhos.",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "build:web": "node scripts/build-web.mjs",
+    "serve:web": "node scripts/build-web.mjs && node scripts/serve-web.mjs",
+    "deploy:web": "node scripts/build-web.mjs && npx wrangler pages deploy dist-web --project-name solotracker"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^39.0.0"
+  }
+}
