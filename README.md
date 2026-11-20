@@ -9,6 +9,14 @@ npm install
 npm start
 ```
 
+To build a portable Windows executable (a single `.exe` that runs without installing):
+
+```bash
+npm run dist          # → release/SoloTracker-<version>-portable.exe
+```
+
+The executable isn't code-signed, so Windows SmartScreen warns on the first run (**More info → Run anyway**). User data stays in `%APPDATA%/solotracker`, so the `.exe` can be moved or replaced freely.
+
 Paste a YouTube link (or just the video ID) and click **Open**. You can also paste with `Ctrl+V` anywhere, or drag the link onto the window.
 
 ## Projects and sections

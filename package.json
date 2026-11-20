@@ -7,10 +7,41 @@
     "start": "electron .",
     "build:web": "node scripts/build-web.mjs",
     "serve:web": "node scripts/build-web.mjs && node scripts/serve-web.mjs",
-    "deploy:web": "node scripts/build-web.mjs && npx wrangler pages deploy dist-web --project-name solotracker"
+    "deploy:web": "node scripts/build-web.mjs && npx wrangler pages deploy dist-web --project-name solotracker",
+    "dist": "electron-builder --win portable"
   },
   "license": "MIT",
   "devDependencies": {
-    "electron": "^39.0.0"
+    "electron": "^39.0.0",
+    "electron-builder": "^26.18.0"
+  },
+  "build": {
+    "appId": "com.solotracker.app",
+    "productName": "SoloTracker",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "src/**/*",
+      "package.json"
+    ],
+    "asarUnpack": [
+      "src/stems/**"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.png"
+    },
+    "portable": {
+      "artifactName": "SoloTracker-${version}-portable.exe"
+    }
   }
 }

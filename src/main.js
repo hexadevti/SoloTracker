@@ -331,7 +331,8 @@ const stemsEnvDir = () => path.join(app.getPath('userData'), 'stems-env');
 const stemsEnvPython = () =>
   path.join(stemsEnvDir(), process.platform === 'win32' ? 'Scripts' : 'bin', `python${EXE}`);
 const stemsEnvMarker = () => path.join(stemsEnvDir(), '.solotracker-ok');
-const SEPARATE_SCRIPT = path.join(__dirname, 'stems', 'separate.py');
+// No executável o script fica fora do app.asar (o Python não lê arquivos de dentro dele).
+const SEPARATE_SCRIPT = path.join(__dirname, 'stems', 'separate.py').replace(/app\.asar([\\/])/, 'app.asar.unpacked$1');
 
 function findStemFile(id, name) {
   const m = /^(\w+)\.flac$/.exec(name || '');
