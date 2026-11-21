@@ -21,7 +21,6 @@ const DEFAULT_SETTINGS = {
   preroll: 0,
   volume: 1,
 };
-const DEFAULT_TRAINER = { on: false, start: 60, step: 5, every: 3, target: 100 };
 const RATE_MIN = 0.25;
 const RATE_MAX = 1.5;
 const SPEED_PRESETS = [50, 60, 70, 75, 80, 90, 100];
@@ -30,7 +29,7 @@ const EXPORT_FORMAT = 'solotracker-project';
 /*
  * Modelo de dados (salvo em userData/solotracker-data.json):
  * {
- *   version: 2, settings, trainer, lastProjectId,
+ *   version: 2, settings, lastProjectId,
  *   projects: { [id]: { id, name, nameEdited, videoId, videoTitle,
  *                       mode: 'online' | 'offline',   (offline = toca o arquivo baixado)
  *                       guitarOn,                     (com trilhas separadas: guitarra ligada?)
@@ -53,12 +52,11 @@ const S = {
   activeSectionId: null,
   capture: null, // null | 'a' | 'b'  (fluxo N → Enter → Enter)
   reps: 0,
-  trainerReps: 0,
   offline: {}, // videoId -> { size }  (vídeos baixados)
   downloads: {}, // videoId -> { stage, percent }  (downloads em andamento)
   stems: {}, // videoId -> true  (guitarra já separada)
   separating: {}, // videoId -> { stage, percent }  (separação em andamento)
-  store: { version: 2, settings: { ...DEFAULT_SETTINGS }, trainer: { ...DEFAULT_TRAINER }, projects: {}, lastProjectId: null },
+  store: { version: 2, settings: { ...DEFAULT_SETTINGS }, projects: {}, lastProjectId: null },
 };
 
 // ---------------------------------------------------------------- utilidades
@@ -144,7 +142,6 @@ function migrateStore(data) {
   const store = {
     version: 2,
     settings: { ...DEFAULT_SETTINGS, ...(data.settings || {}) },
-    trainer: { ...DEFAULT_TRAINER, ...(data.trainer || {}) },
     projects: data.projects || {},
     lastProjectId: data.lastProjectId || null,
   };
@@ -220,6 +217,18 @@ function seekThrottled(t) {
     }
   }, 45);
 }
+/*
+ * Início/fim de um arraste da posição. Na web, o player do YouTube continua tocando
+ * (sem som) durante o arraste: pausado, ele cobre o vídeo com a camada de pausa.
+ */
+function scrubStart(wasPlaying) {
+  if (WEB) send('scrubStart');
+  else if (wasPlaying) send('pause');
+}
+function scrubEnd(play) {
+  if (WEB) send('scrubEnd', { play });
+  else if (play) send('play');
+}
 function endDragSeek(t) {
   clearTimeout(seekTimer);
   seekTimer = null;
@@ -294,14 +303,13 @@ function setRate(r, { silent = false, sync = true } = {}) {
     p.last.rate = S.rate;
     saveSoon();
   }
-  const sec = sync && !S.store.trainer.on && !S.capture ? activeSection() : null;
+  const sec = sync && !S.capture ? activeSection() : null;
   if (sec && sec.rate !== S.rate) {
     sec.rate = S.rate;
     touch();
     updateSectionRange(sec);
   }
   if (!silent) toast(sec ? tr('Velocidade {pct}% · {name}', { pct, name: sec.name }) : tr('Velocidade {pct}%', { pct }));
-  updateTrainerStatus();
 }
 
 // ---------------------------------------------------------------- loop
@@ -407,9 +415,7 @@ function goToA() {
 
 function resetReps() {
   S.reps = 0;
-  S.trainerReps = 0;
   updateRepCounter();
-  updateTrainerStatus();
 }
 
 function updateRepCounter() {
@@ -464,7 +470,9 @@ function captureMark() {
   a = round2(a);
   b = round2(b);
   const p = project();
-  const sec = { id: uid(), name: tr('Trecho {n}', { n: p.sections.length + 1 }), a, b, rate: S.rate };
+  // Nome = só o número, na ordem de criação (não reaproveita números de trechos apagados).
+  p.sectionSeq = Math.max(p.sectionSeq || 0, p.sections.length) + 1;
+  const sec = { id: uid(), name: String(p.sectionSeq), a, b, rate: S.rate };
   p.sections.push(sec);
   sortSections();
   S.capture = null;
@@ -508,7 +516,7 @@ function updateCaptureUi() {
 // ---------------------------------------------------------------- trechos do projeto
 function sortSections() {
   const p = project();
-  if (p) p.sections.sort((x, y) => x.a - y.a);
+  if (p) p.sections.sort((x, y) => x.a - y.a || x.b - y.b);
 }
 
 function openSection(sec) {
@@ -518,7 +526,7 @@ function openSection(sec) {
   S.loop = { a: sec.a, b: sec.b, enabled: true };
   resetReps();
   applyLoop();
-  if (sec.rate && !S.store.trainer.on) setRate(sec.rate, { silent: true });
+  if (sec.rate) setRate(sec.rate, { silent: true });
   goToA();
   send('play');
   renderSections();
@@ -534,7 +542,9 @@ function updateSectionRange(sec) {
   if (el) el.textContent = sectionRangeText(sec);
 }
 
+let lastSectionTap = { id: null, at: 0 };
 function renderSections(editId = null) {
+  sortSections(); // lista sempre em ordem de tempo (início, depois fim)
   const p = project();
   const list = $('sectionList');
   list.innerHTML = '';
@@ -568,7 +578,17 @@ function renderSections(editId = null) {
       } else if (act === 'rename') {
         startRename(li, sec);
       } else {
-        openSection(sec);
+        // 1 toque: abre o trecho (no selecionado, volta ao início). 2 toques seguidos no
+        // trecho selecionado: tira a seleção.
+        const now = performance.now();
+        const twice = lastSectionTap.id === sec.id && now - lastSectionTap.at < 400;
+        lastSectionTap = twice ? { id: null, at: 0 } : { id: sec.id, at: now };
+        if (twice && sec.id === S.activeSectionId && !S.capture) {
+          clearLoop();
+          toast(tr('Saiu do trecho'));
+        } else {
+          openSection(sec);
+        }
       }
     });
     li.addEventListener('dblclick', (e) => {
@@ -608,42 +628,9 @@ function startRename(li, sec) {
   input.addEventListener('blur', () => commit(true));
 }
 
-// ---------------------------------------------------------------- treino progressivo
-function readTrainerInputs() {
-  const t = S.store.trainer;
-  t.start = clamp(Number($('trainerStart').value) || 60, 25, 150);
-  t.step = clamp(Number($('trainerStep').value) || 5, 1, 50);
-  t.every = clamp(Math.round(Number($('trainerEvery').value) || 3), 1, 50);
-  t.target = clamp(Number($('trainerTarget').value) || 100, 25, 150);
-  saveSoon();
-}
-
-function updateTrainerStatus() {
-  const t = S.store.trainer;
-  const el = $('trainerStatus');
-  if (!t.on) {
-    el.textContent = '';
-    return;
-  }
-  const pct = Math.round(S.rate * 100);
-  if (pct >= t.target) {
-    el.textContent = tr('Meta atingida: {pct}% 🎸', { pct });
-  } else {
-    const left = t.every - (S.trainerReps % t.every);
-    el.textContent = tr('Agora {pct}% · sobe para {next}% em {n} repetição(ões)', { pct, next: Math.min(t.target, pct + t.step), n: left });
-  }
-}
-
 function onLoopWrapped() {
   S.reps += 1;
-  S.trainerReps += 1;
   updateRepCounter();
-  const t = S.store.trainer;
-  if (t.on && S.trainerReps % t.every === 0) {
-    const next = Math.min(t.target, Math.round(S.rate * 100) + t.step);
-    if (next > Math.round(S.rate * 100)) setRate(next / 100);
-  }
-  updateTrainerStatus();
 }
 
 // ---------------------------------------------------------------- projetos
@@ -1117,7 +1104,7 @@ async function importProjects() {
     p.sections = (Array.isArray(src.sections) ? src.sections : [])
       .map((s) => ({ id: uid(), name: String(s.name || tr('Trecho')).slice(0, 200), a: num(s.a), b: num(s.b), rate: clamp(num(s.rate) || 1, RATE_MIN, RATE_MAX) }))
       .filter((s) => s.a != null && s.b != null && s.b > s.a && s.a >= 0);
-    p.sections.forEach((s, i) => { if (!s.name) s.name = tr('Trecho {n}', { n: i + 1 }); });
+    p.sections.forEach((s, i) => { if (!s.name) s.name = String(i + 1); });
     S.store.projects[p.id] = p;
     lastId = p.id;
     imported += 1;
@@ -1429,7 +1416,7 @@ const tlZoom = makeTimeline($('timelineZoom'), zoomView);
     if (!drag.moved && Math.abs(dx) < 6) return;
     if (!drag.moved) {
       drag.moved = true;
-      if (drag.wasPlaying) send('pause');
+      scrubStart(drag.wasPlaying);
     }
     const delta = (dx / 100) * settings().jog;
     const t = clamp(drag.t0 + delta, 0, S.duration || Infinity);
@@ -1446,14 +1433,34 @@ const tlZoom = makeTimeline($('timelineZoom'), zoomView);
     drag = null;
     $('jogBadge').classList.add('hidden');
     if (!d.moved) {
-      if (e.type === 'pointerup') togglePlay();
+      if (e.type === 'pointerup') onTap();
       return;
     }
     const t = S.dragTime ?? d.t0;
     scrubLoopCheck(t, 'end');
     endDragSeek(t);
-    if (d.wasPlaying) send('play');
+    scrubEnd(d.wasPlaying);
   };
+
+  // No celular, dois toques entram no vídeo em tela cheia (evento 'jog-doubletap'):
+  // o toque simples espera um pouco para não pausar/tocar à toa.
+  let tapTimer = null;
+  function onTap() {
+    if (!TOUCH) {
+      togglePlay();
+      return;
+    }
+    if (tapTimer) {
+      clearTimeout(tapTimer);
+      tapTimer = null;
+      overlay.dispatchEvent(new CustomEvent('jog-doubletap'));
+      return;
+    }
+    tapTimer = setTimeout(() => {
+      tapTimer = null;
+      togglePlay();
+    }, 260);
+  }
   overlay.addEventListener('pointerup', end);
   overlay.addEventListener('pointercancel', end);
 
@@ -1701,34 +1708,6 @@ function bindUi() {
   });
 
   setupLanguagePicker();
-
-  // Treino progressivo
-  const t = S.store.trainer;
-  $('trainerOn').checked = false; // sempre começa desligado
-  t.on = false;
-  $('trainerStart').value = t.start;
-  $('trainerStep').value = t.step;
-  $('trainerEvery').value = t.every;
-  $('trainerTarget').value = t.target;
-  ['trainerStart', 'trainerStep', 'trainerEvery', 'trainerTarget'].forEach((id) => {
-    $(id).addEventListener('change', () => {
-      readTrainerInputs();
-      updateTrainerStatus();
-    });
-  });
-  $('trainerOn').addEventListener('change', (e) => {
-    readTrainerInputs();
-    t.on = e.target.checked;
-    S.trainerReps = 0;
-    if (t.on) {
-      setRate(t.start / 100);
-      if (hasLoop() && !S.loop.enabled) {
-        S.loop.enabled = true;
-        applyLoop();
-      }
-    }
-    updateTrainerStatus();
-  });
 }
 
 /** Escolha do idioma (Configurações). Trocar recarrega a interface. */

@@ -132,6 +132,9 @@ html = replaceOnce(
 );
 html = replaceOnce(html, /<script src="app.js"><\/script>/, `<script src="app.js"></script>
   <script src="mobile.js"></script>`, 'o app.js');
+// Versão no endereço dos arquivos: o domínio próprio no Cloudflare faz o navegador
+// guardar CSS/JS por horas; com ?v=build cada deploy pede arquivos novos.
+html = html.replace(/(src|href)="([\w.-]+\.(?:js|css|webmanifest))"/g, `$1="$2?v=${build}"`);
 await fs.writeFile(path.join(OUT, 'index.html'), html);
 
 for (const size of [180, 192, 512]) {

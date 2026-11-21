@@ -193,6 +193,47 @@
   // tocar sem novo toque (trocar de projeto continua tocando).
   let sharedVideo = null;
 
+  /*
+   * No celular, o navegador para e reinicia a saída de áudio a cada seek / pause→play,
+   * e o sistema (Android/iOS) faz uma rampa de volume ("fade in") no reinício.
+   * Passando o som do <video> pelo Web Audio, a saída fica sempre aberta (o AudioContext
+   * não para) e o som volta na hora. Só vale para arquivos locais: o áudio do YouTube
+   * fica dentro do iframe dele e não pode ser redirecionado.
+   */
+  const audioRoute = {
+    ctx: null,
+    gain: null,
+    failed: false,
+    attach(v) {
+      if (this.ctx || this.failed) return !!this.ctx;
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC || !document.documentElement.classList.contains('mobile')) {
+        this.failed = true;
+        return false;
+      }
+      try {
+        // iOS 17+: toca mesmo com a chave de silencioso, como o <video> faria.
+        if (navigator.audioSession) navigator.audioSession.type = 'playback';
+        const ctx = new AC({ latencyHint: 'interactive' });
+        const src = ctx.createMediaElementSource(v);
+        const gain = ctx.createGain();
+        src.connect(gain).connect(ctx.destination);
+        this.ctx = ctx;
+        this.gain = gain;
+        // Saindo de uma interrupção (ligação, outro app), retoma no próximo toque.
+        const wake = () => this.resume();
+        ['pointerdown', 'touchend', 'keydown'].forEach((t) => document.addEventListener(t, wake, true));
+        return true;
+      } catch {
+        this.failed = true;
+        return false;
+      }
+    },
+    resume() {
+      if (this.ctx && this.ctx.state !== 'running') this.ctx.resume().catch(() => {});
+    },
+  };
+
   function LocalEngine(url, opts, on) {
     const el = host();
     const v = sharedVideo || (sharedVideo = document.createElement('video'));
@@ -203,6 +244,7 @@
     v.preservesPitch = true;
     v.webkitPreservesPitch = true;
     v.mozPreservesPitch = true;
+    const routed = audioRoute.attach(v);
     el.replaceChildren(v);
     el.classList.remove('audio-only');
     el.dataset.name = opts.name || '';
@@ -220,6 +262,7 @@
       seeking: () => v.seeking,
       actualRate: () => v.playbackRate,
       play() {
+        audioRoute.resume();
         const p = v.play();
         if (p) {
           p.catch((err) => {
@@ -243,6 +286,13 @@
         return r;
       },
       setVolume(vol) {
+        if (routed) {
+          // Pelo Web Audio o volume funciona até no iOS.
+          v.volume = 1;
+          v.muted = false;
+          audioRoute.gain.gain.value = vol;
+          return;
+        }
         v.volume = vol; // no iOS o volume é só do sistema; o mudo funciona
         v.muted = vol === 0;
       },
@@ -503,6 +553,7 @@
     loop: { a: null, b: null, enabled: false },
     gap: 0,
     gapTimer: null,
+    scrub: false, // arrastando a posição
     lastStatusAt: 0,
     warnedRate: null,
   };
@@ -572,7 +623,7 @@
     const e = C.engine;
     if (e) {
       const { a, b, enabled } = C.loop;
-      if (enabled && a != null && b != null && !e.paused() && !e.seeking() && !C.gapTimer && e.time() >= b) {
+      if (enabled && a != null && b != null && !C.scrub && !e.paused() && !e.seeking() && !C.gapTimer && e.time() >= b) {
         wrapLoop();
       }
       sendStatus(false);
@@ -711,6 +762,24 @@
           clearGap();
           e.pause();
         }
+        break;
+      case 'scrubStart':
+        // YouTube pausado cobre o vídeo com a camada de pausa (título, "mais vídeos"):
+        // durante o arraste ele continua tocando, sem som. Arquivo local só pausa.
+        clearGap();
+        C.scrub = true;
+        if (e.kind === 'youtube') {
+          e.setVolume(0);
+          if (e.paused()) e.play();
+        } else {
+          e.pause();
+        }
+        break;
+      case 'scrubEnd':
+        C.scrub = false;
+        if (cmd.play) e.play();
+        else e.pause();
+        if (e.kind === 'youtube') e.setVolume(C.volume);
         break;
       case 'seek': {
         const d = e.duration() || Infinity;

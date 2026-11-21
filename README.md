@@ -33,7 +33,7 @@ Each song is a **project**: a YouTube video with its practice sections.
 
 **Creating a section:** press `N`. Then press `Enter` at the start of the section and `Enter` again at the end. The section is saved with the current speed and starts looping right away. `Esc` cancels.
 
-- Changing the speed (`=`/`-`, `↑`/`↓`, the slider or the presets) while a section is selected saves the new speed in it. The exception is when the speed trainer is on, since it changes the speed by itself.
+- Changing the speed (`=`/`-`, `↑`/`↓`, the slider or the presets) while a section is selected saves the new speed in it.
 - Each section has a ✎ button (rename; double-click also works) and a ✕ button (delete).
 - A/B adjustments (the `A`/`B` keys, the −/+ buttons, the timeline handles) made while a section is selected are saved in it.
 - Use the `1`–`9` and `0` (section 10) keys to jump between sections.
@@ -72,7 +72,6 @@ In offline mode, a **🎸 Separate guitar** button appears. It separates the gui
 - **Speed from 25% to 150%** in 1% steps, keeping the pitch.
 - **Dragging over the video** (mouse or finger) seeks forward and back. The sensitivity is configurable.
 - **Arrow keys** seek back/forward with a configurable step (normal, big with `Shift`, fine with `Ctrl`).
-- **Speed trainer**: raises the speed every N repetitions until the goal.
 - **Pause between repetitions** and **pre-roll** before A.
 - Resumes where you left off (position, loop and speed per project).
 - **Portuguese and English**: follows the system/browser language (pt → Portuguese, anything else → English). To change it, use **Settings → Idioma / Language**; the choice is saved.
@@ -101,7 +100,7 @@ Data is stored in `%APPDATA%/solotracker/solotracker-data.json`. Data in the old
 
 A static browser version, ready for Cloudflare Pages. The same page detects the device:
 
-- **Phone** (touch screen with the shorter side under 768px): a layout for **landscape** use. The video takes the left side and the timeline sits below it. The sidebar has tabs (Controls / Sections / Trainer / Settings). There is a full-screen button, and the screen stays on while you practice.
+- **Phone** (touch screen with the shorter side under 768px): a layout for **landscape** use. The video takes the left side and the timeline sits below it. The sidebar has tabs (Controls / Sections / Settings). There is a full-screen button, and the screen stays on while you practice.
 - **Desktop** (and tablets): the same layout as the Electron app.
 - To force a layout, use **Settings → Layout** or open the page with `?layout=mobile`, `?layout=desktop` or `?layout=auto`.
 
@@ -114,7 +113,7 @@ npm run serve:web     # builds and serves at http://localhost:8788 (prints the a
 
 | Feature | YouTube | File on the device (📂 File) |
 |---|---|---|
-| Projects, sections, speed trainer, export/import | ✅ | ✅ |
+| Projects, sections, export/import | ✅ | ✅ |
 | A-B loop, pause between repetitions, drag over the video | ✅ (~0.1–0.3 s precision) | ✅ (precise) |
 | Speed | only the ones YouTube offers (0.25 / 0.5 / 0.75 / 1 / 1.25 / 1.5 / 1.75 / 2) | any, 25–150%, pitch preserved |
 | No internet | ❌ | ✅ (after the first visit) |

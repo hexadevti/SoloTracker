@@ -1,22 +1,16 @@
 /* SoloTracker web — service worker: rede primeiro, cache como reserva (abre sem internet). */
 const CACHE = 'solotracker-__BUILD__';
+const V = '?v=__BUILD__';
 const SHELL = [
   './',
-  'styles.css',
-  'web.css',
-  'web-api.js',
-  'i18n.js',
-  'timeline.js',
-  'app.js',
-  'mobile.js',
-  'manifest.webmanifest',
+  ...['styles.css', 'web.css', 'web-api.js', 'i18n.js', 'timeline.js', 'app.js', 'mobile.js', 'manifest.webmanifest'].map((f) => f + V),
   'icon-180.png',
   'icon-192.png',
   'icon-512.png',
 ];
 
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL.map((u) => new Request(u, { cache: 'reload' })))).then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', (e) => {
@@ -34,7 +28,8 @@ self.addEventListener('fetch', (e) => {
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return; // YouTube etc. passam direto
   e.respondWith(
-    fetch(req)
+    // Navegação vai como veio (mudar o pedido quebraria redirecionamentos); o resto sempre revalida.
+    fetch(req.mode === 'navigate' ? req : new Request(req, { cache: 'no-cache' }))
       .then((res) => {
         if (res.ok && res.type === 'basic') {
           const copy = res.clone();

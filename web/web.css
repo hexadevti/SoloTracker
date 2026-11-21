@@ -54,7 +54,6 @@ html.mobile .project-box { flex: 1; gap: 6px; }
 html.mobile #projectName { width: auto; flex: 1; min-width: 60px; padding: 4px 6px; }
 html.mobile #btnLibrary { padding: 6px 10px; font-size: 16px; }
 html.mobile .mode-btn { min-width: 0; }
-html.mobile .m-fs { font-size: 16px; }
 
 /* palco: vídeo ocupa o espaço que sobra, linha do tempo embaixo */
 html.mobile .stage { padding: 6px 8px; gap: 4px; overflow: hidden; }
@@ -77,17 +76,6 @@ html.mobile .sidebar [data-pane] { display: none; }
 html.mobile .sidebar [data-pane].m-show { display: block; }
 html.mobile .sidebar .panel > summary { pointer-events: none; list-style: none; padding: 8px 0 4px; }
 html.mobile .sidebar .panel > summary::-webkit-details-marker { display: none; }
-html.mobile .m-tabs {
-  position: sticky; top: 0; z-index: 2; display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px;
-  background: var(--panel); padding: 6px 0;
-}
-html.mobile .m-tab {
-  background: var(--panel-2); color: var(--muted); border: 1px solid var(--border); border-radius: 6px;
-  padding: 7px 2px; font-size: 11px; white-space: nowrap; overflow: hidden; touch-action: manipulation;
-}
-html.mobile .m-tab.on { color: #111; background: var(--accent); border-color: var(--accent); font-weight: 600; }
-html.mobile .m-tab.ping { animation: m-ping .4s 3; }
-@keyframes m-ping { 50% { border-color: var(--accent); color: var(--accent-2); } }
 
 /* controles empilhados na aba Controles */
 html.mobile .m-controls { padding: 6px; }
@@ -97,6 +85,11 @@ html.mobile .m-controls .transport .btn.icon { width: 48px; height: 44px; }
 html.mobile .m-controls .transport .btn.icon.big { width: 58px; }
 html.mobile .m-controls .volume { margin-left: 0; width: 100%; justify-content: center; }
 html.mobile .m-controls .volume input { width: 70%; }
+/* fora da tela cheia: sem transporte nem volume, velocidade só com a barra, A/B sem o tempo e sem − + */
+html.mobile .m-controls .transport { display: none; }
+html.mobile .m-controls .nudge { display: none; }
+html.mobile .m-controls #speedDown, html.mobile .m-controls #speedUp, html.mobile .m-controls .presets { display: none; }
+html.mobile .m-controls .loop-time { display: none; }
 html.mobile .m-controls .speed > label { width: 100%; margin: 0; }
 html.mobile .m-controls .speed input[type=range] { flex: 1; width: auto; min-width: 100px; }
 html.mobile .m-controls .presets { width: 100%; justify-content: center; }
@@ -125,22 +118,144 @@ html.mobile .lib-item .info > span:not(.name) { font-size: 12px; }
 
 /* celular em pé: empilha (o app foi pensado para usar deitado) */
 @media (orientation: portrait) {
-  html.mobile .layout { flex-direction: column; overflow-y: auto; }
+  /* vídeo e linha do tempo fixos em cima; só a coluna de controles/trechos rola */
+  html.mobile .layout { flex-direction: column; overflow: hidden; }
   html.mobile .stage { flex: none; overflow: visible; }
   html.mobile .video-wrap { flex: none; aspect-ratio: 16 / 9; min-height: 0; }
-  html.mobile .sidebar { width: auto; border-left: 0; border-top: 1px solid var(--border); overflow: visible; }
+  html.mobile .sidebar {
+    flex: 1 1 auto; min-height: 0; width: auto; border-left: 0; border-top: 1px solid var(--border);
+    overflow-y: auto; overscroll-behavior: contain;
+  }
   html.mobile .modal-head { flex-wrap: wrap; }
   html.mobile .modal-head input { order: 5; flex-basis: 100%; }
   html.mobile .new-project { flex-wrap: wrap; }
   html.mobile .new-project input { flex-basis: 100%; }
 }
-.m-rotate { display: none; }
-@media (orientation: portrait) {
-  html.mobile .m-rotate {
-    display: flex; position: fixed; inset: 0; z-index: 100; background: rgba(10, 11, 13, .96);
-    align-items: center; justify-content: center; text-align: center; padding: 24px;
-  }
+/* ---------- vídeo em tela cheia (celular) ---------- */
+.m-vfs-btn, .m-vfs-exit, .m-vfs-layer, .m-vfs-sec, .m-vfs-sec-cancel, .m-vfs-cur { display: none; }
+html.mobile .m-vfs-btn {
+  display: block; position: absolute; right: 8px; bottom: 8px; z-index: 4;
+  width: 40px; height: 40px; border-radius: 8px; border: 0;
+  background: rgba(0, 0, 0, .55); color: #fff; font-size: 20px; touch-action: manipulation;
 }
-.m-rotate-card { display: flex; flex-direction: column; align-items: center; gap: 10px; font-size: 16px; }
-.m-rotate-icon { font-size: 54px; animation: m-rot 2s ease-in-out infinite; }
-@keyframes m-rot { 0%, 30% { transform: rotate(0); } 60%, 100% { transform: rotate(-90deg); } }
+html.mobile .jog-overlay.hidden ~ .m-vfs-btn { display: none; }
+html.mobile.m-vfs .video-wrap {
+  position: fixed; inset: 0; z-index: 40; width: 100%; height: 100%;
+  max-height: none; aspect-ratio: auto; border-radius: 0;
+}
+html.mobile.m-vfs .m-vfs-btn { display: none; }
+html.mobile.m-vfs .m-vfs-layer { display: block; position: absolute; inset: 0; z-index: 3; touch-action: none; }
+/* Antes do 1º play do YouTube o toque precisa chegar ao player. */
+html.mobile.m-vfs .jog-overlay.pass ~ .m-vfs-layer { pointer-events: none; }
+html.mobile.m-vfs .jog-overlay.hidden ~ .m-vfs-layer { display: none; }
+/* ✕ (sair da tela cheia): mesmo tamanho e estilo do botão "+", longe da borda */
+html.mobile.m-vfs .m-vfs-exit {
+  display: flex; align-items: center; justify-content: center; position: absolute; z-index: 7;
+  top: max(16px, env(safe-area-inset-top)); right: max(16px, env(safe-area-inset-right));
+  width: 56px; height: 56px; border-radius: 50%; border: 2px solid rgba(255, 255, 255, .6);
+  background: rgba(0, 0, 0, .5); color: #fff; font-size: 24px; font-weight: 700; line-height: 1;
+  opacity: .85; touch-action: manipulation;
+}
+html.mobile.m-vfs .jog-badge, html.mobile.m-vfs .gap-badge, html.mobile.m-vfs .capture-banner { z-index: 4; }
+html.mobile.m-vfs .m-vfs-sec {
+  display: flex; align-items: center; justify-content: center; position: absolute; z-index: 5;
+  right: max(16px, env(safe-area-inset-right)); bottom: calc(max(16px, env(safe-area-inset-bottom)) + 52px);
+  width: 56px; height: 56px; border-radius: 50%; border: 2px solid rgba(255, 255, 255, .6);
+  background: rgba(0, 0, 0, .5); color: #fff; font-size: 26px; font-weight: 700; line-height: 1;
+  opacity: .85; touch-action: manipulation;
+}
+/* ● Rec: aguardando o início (ponto vermelho) · ■ Stop: gravando, toque para marcar o fim */
+html.mobile.m-vfs .m-vfs-sec.recording { opacity: 1; border-color: #fff; }
+html.mobile.m-vfs .m-vfs-sec[data-state="a"] { background: rgba(0, 0, 0, .7); color: #ff3b3b; font-size: 30px; }
+html.mobile.m-vfs .m-vfs-sec[data-state="b"] {
+  background: #d63031; color: #fff; font-size: 22px; animation: m-rec 1.2s ease-in-out infinite;
+}
+@keyframes m-rec { 50% { box-shadow: 0 0 0 6px rgba(214, 48, 49, .35); } }
+html.mobile.m-vfs .jog-overlay.hidden ~ .m-vfs-sec { display: none; }
+html.mobile.m-vfs .m-vfs-sec-cancel.on {
+  display: flex; align-items: center; justify-content: center; position: absolute; z-index: 5;
+  right: calc(max(16px, env(safe-area-inset-right)) + 8px); bottom: max(16px, env(safe-area-inset-bottom));
+  width: 40px; height: 40px; border-radius: 50%; border: 0;
+  background: rgba(0, 0, 0, .55); color: #fff; font-size: 16px; touch-action: manipulation;
+}
+html.mobile.m-vfs .jog-overlay.hidden ~ .m-vfs-sec-cancel { display: none; }
+html.mobile.m-vfs .m-vfs-cur.on {
+  display: flex; align-items: center; gap: 6px; position: absolute; z-index: 5; max-width: 60%;
+  top: max(8px, env(safe-area-inset-top)); left: max(8px, env(safe-area-inset-left));
+  padding: 0 0 0 16px; height: 46px; border-radius: 23px;
+  background: var(--accent); color: #111; font-size: 19px; font-weight: 700;
+  border: 2px solid rgba(0, 0, 0, .35); box-shadow: 0 2px 10px rgba(0, 0, 0, .6);
+}
+html.mobile.m-vfs .m-vfs-cur-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+html.mobile.m-vfs .m-vfs-cur-x {
+  flex: none; width: 44px; height: 44px; border: 0; border-radius: 50%;
+  background: transparent; color: #111; font-size: 18px; font-weight: 700; touch-action: manipulation;
+}
+html.mobile.m-vfs .jog-overlay.hidden ~ .m-vfs-cur { display: none; }
+/* lista de trechos (pausado); o selo do trecho atual some enquanto ela aparece */
+.m-vfs-list { display: none; }
+html.mobile.m-vfs .m-vfs-cur.on.under-list { display: none; }
+html.mobile.m-vfs .m-vfs-list.on {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 6px; position: absolute; z-index: 5;
+  left: max(8px, env(safe-area-inset-left)); top: max(8px, env(safe-area-inset-top)); bottom: max(8px, env(safe-area-inset-bottom));
+  max-width: 45%; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; padding-right: 4px;
+}
+html.mobile.m-vfs .jog-overlay.hidden ~ .m-vfs-list { display: none; }
+html.mobile.m-vfs .m-vfs-item {
+  flex: none; min-width: 44px; max-width: 100%; height: 40px; padding: 0 12px; border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, .35); background: rgba(0, 0, 0, .55); color: #fff;
+  font-size: 15px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; touch-action: manipulation;
+}
+html.mobile.m-vfs .m-vfs-item.cur { background: var(--accent); border-color: var(--accent); color: #111; }
+html.mobile.m-vfs .m-vfs-item { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; transition: transform .15s; }
+html.mobile.m-vfs .m-vfs-item.holding { transform: scale(.92); }
+.m-vfs-confirm { display: none; }
+html.mobile.m-vfs .m-vfs-confirm {
+  display: flex; position: absolute; inset: 0; z-index: 8; align-items: center; justify-content: center;
+  background: rgba(0, 0, 0, .6);
+}
+html.mobile.m-vfs .m-vfs-confirm-card {
+  background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px;
+  color: var(--text); font-size: 16px; text-align: center; min-width: 240px;
+}
+html.mobile.m-vfs .m-vfs-confirm-card p { margin: 0 0 14px; }
+html.mobile.m-vfs .m-vfs-confirm-btns { display: flex; gap: 10px; justify-content: center; }
+html.mobile.m-vfs .m-vfs-confirm-btns .btn { flex: 1; padding: 10px; }
+html.mobile.m-vfs .m-vfs-confirm-btns .btn.danger { background: var(--danger); border-color: var(--danger); color: #fff; }
+.m-vfs-prog { display: none; }
+html.mobile.m-vfs .m-vfs-prog.on {
+  display: block; position: absolute; z-index: 6; left: 0; right: 0; top: 0; height: 8px;
+  background: rgba(255, 255, 255, .25); pointer-events: none;
+}
+html.mobile.m-vfs .m-vfs-prog-range { position: absolute; top: 0; bottom: 0; background: rgba(255, 255, 255, .35); }
+html.mobile.m-vfs .m-vfs-prog-fill { position: absolute; left: 0; top: 0; bottom: 0; background: var(--accent); }
+html.mobile.m-vfs .m-vfs-prog-head {
+  position: absolute; top: -3px; width: 4px; height: 14px; margin-left: -2px; border-radius: 2px; background: #fff;
+}
+html.mobile.m-vfs .m-vfs-prog.fast .m-vfs-prog-fill { background: var(--accent-2, var(--accent)); }
+.m-vfs-hint {
+  position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 10px; background: rgba(0, 0, 0, .78); color: #fff; font-size: 15px; text-align: center; padding: 16px;
+}
+.m-vfs-hint p { margin: 3px 0; }
+
+/* ---------- sem barra do topo (celular) ---------- */
+html.mobile .topbar { display: none; }
+html.mobile .m-side-head { display: flex; gap: 6px; padding: 6px 0; }
+html.mobile .m-side-head #btnLibrary { flex: 1; padding: 9px; font-size: 15px; }
+html.mobile .m-gear { flex: none; width: 46px; padding: 0; font-size: 20px; }
+html.mobile .m-gear.on { color: #111; background: var(--accent); border-color: var(--accent); }
+/* trecho: só "＋ Novo trecho"; durante a criação, ● / ■ no lugar e Cancelar embaixo */
+html.mobile .m-controls .loop-point, html.mobile .m-controls #btnLoop, html.mobile .m-controls #btnClearLoop { display: none; }
+html.mobile .m-controls #btnNewSection.m-hide { display: none; }
+.m-capture { display: none; }
+html.mobile .m-controls .m-capture.on { display: flex; flex-direction: column; gap: 6px; width: 100%; }
+html.mobile .m-cap-row { display: flex; gap: 6px; }
+html.mobile .m-cap-rec, html.mobile .m-cap-stop { flex: 1; padding: 10px; font-size: 24px; line-height: 1; }
+html.mobile .m-cap-rec { color: #ff3b3b; }
+html.mobile .m-cap-rec.m-hide, html.mobile .m-cap-stop.m-hide { display: none; }
+html.mobile .m-cap-rec { border-color: #ff3b3b; }
+html.mobile .m-cap-stop { background: #d63031; border-color: #d63031; color: #fff; animation: m-rec 1.2s ease-in-out infinite; }
+html.mobile .m-cap-cancel { width: 100%; padding: 8px; }
+html.mobile .m-source { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 0 8px; font-size: 13px; }
+html.mobile .m-source .mode-btn { flex: none; }

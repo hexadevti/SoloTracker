@@ -107,19 +107,6 @@
         <p id="sectionListEmpty" class="muted small-text">Nenhum trecho ainda. Pressione <kbd>N</kbd> e depois <kbd>Enter</kbd> no início e <kbd>Enter</kbd> no fim do trecho.</p>
       </details>
 
-      <details open class="panel" data-pane="trainer">
-        <summary>Treino progressivo</summary>
-        <p class="muted small-text">Aumenta a velocidade automaticamente a cada N repetições do loop.</p>
-        <label class="check"><input id="trainerOn" type="checkbox" /> Ativar</label>
-        <div class="form-grid">
-          <label>Começar em (%)</label><input id="trainerStart" type="number" min="25" max="150" value="60" />
-          <label>Aumentar (%)</label><input id="trainerStep" type="number" min="1" max="50" value="5" />
-          <label>A cada (repetições)</label><input id="trainerEvery" type="number" min="1" max="50" value="3" />
-          <label>Até (%)</label><input id="trainerTarget" type="number" min="25" max="150" value="100" />
-        </div>
-        <div id="trainerStatus" class="trainer-status muted small-text"></div>
-      </details>
-
       <details class="panel" data-pane="settings">
         <summary>Configurações</summary>
         <div id="settingsGrid" class="form-grid">
